@@ -12,6 +12,8 @@ local vapeEvents = setmetatable({}, {
 	end
 })
 
+print("check 1")
+
 local playersService = cloneref(game:GetService('Players'))
 local replicatedStorage = cloneref(game:GetService('ReplicatedStorage'))
 local runService = cloneref(game:GetService('RunService'))
@@ -167,6 +169,8 @@ local function getItem(itemName, inv)
 	end
 	return nil
 end
+
+print("check 2")
 
 local function getRoactRender(func)
 	return debug.getupvalue(debug.getupvalue(debug.getupvalue(func, 3).render, 2).render, 1)
@@ -512,6 +516,8 @@ run(function()
 				char:WaitForChild('HandInvItem', 5)
 			} or {}
 
+			print("updateobjects/handinvitem check 1")
+
 			if hum and humrootpart then
 				local entity = {
 					Connections = {},
@@ -561,6 +567,8 @@ run(function()
 							end)
 						end))
 					end
+
+					print("updateobjects check 1")
 
 					if plr then
 						local anim = char:FindFirstChild('Animate')
@@ -3107,6 +3115,8 @@ run(function()
 		end
 	})
 end)
+
+print("check 3")
 	
 run(function()
 	local Speed
