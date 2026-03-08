@@ -1,3 +1,4 @@
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local mainapi = {
 	Categories = {},
 	GUIColor = {
@@ -5673,7 +5674,7 @@ local scarcitybanner = Instance.new('TextLabel')
 scarcitybanner.Size = UDim2.fromScale(1, 0.02)
 scarcitybanner.Position = UDim2.fromScale(0, 0.97)
 scarcitybanner.BackgroundTransparency = 1
-scarcitybanner.Text = 'A new discord has been created, click the discord icon to join.'
+scarcitybanner.Text = '🐈‍🐈🐈‍'
 scarcitybanner.TextScaled = true
 scarcitybanner.TextColor3 = Color3.new(1, 1, 1)
 scarcitybanner.TextStrokeTransparency = 0.5
@@ -5796,6 +5797,11 @@ mainapi:CreateCategory({
 	Name = 'Minigames',
 	Icon = getcustomasset('newvape/assets/new/miniicon.png'),
 	Size = UDim2.fromOffset(19, 12)
+})
+mainapi:CreateCategory({
+	Name = 'Kit',
+	Icon = getcustomasset('newvape/assets/new/kiticon.png'),
+	Size = UDim2.fromOffset(18, 18)
 })
 mainapi.Categories.Main:CreateDivider('misc')
 
