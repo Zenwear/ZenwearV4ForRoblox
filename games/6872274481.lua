@@ -1,5 +1,4 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
---This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -10723,144 +10722,6 @@ run(function()
 	})
 end)
 
-
-
-run(function()
-	local Deflect
-	local DeflectTm
-	local Range
-	local LimitToItem
-	local old
-	Deflect = vape.Categories.Utility:CreateModule({
-		Name = 'Deflect',
-		Function = function(callback)
-			if role ~= "owner" and role ~= "coowner" and role ~= "admin" and role ~= "friend" and role ~= "premium" and role ~= "user"then
-				vape:CreateNotification("Onyx", "You don’t have access to this.", 10, "alert")
-				return
-			end 
-			if callback then
-				local function getWorldFolder()
-					local Map = workspace:WaitForChild("Map", math.huge)
-					local Worlds = Map:WaitForChild("Worlds", math.huge)
-					if not Worlds then return nil end
-
-					return Worlds:GetChildren()[1] 
-				end
-				local blocks = getWorldFolder()
-				local function GetPlayerFromUserID(id)
-					return playersService:GetPlayerByUserId(id)
-				end
-				local bows = getBows()
-				local originalSlot = store.inventory.hotbarSlot
-				Deflect:Clean(blocks.ChildAdded:Connect(function(child)
-                	if child:IsA("BasePart") and child.Name == "tnt" or child.Name == "siege_tnt" and Deflect.Enabled then
-						if child:GetAttribute("PlacedByUserId") == lplr.UserId then return end
-						local Distance = (child.Position - entitylib.character.RootPart.Position).Magnitude
-						local nlplr = GetPlayerFromUserID(child:GetAttribute("PlacedByUserId"))
-						if Distance <= Range.Value or 20 then
-							if nlplr.Team == lplr.Team then
-								if DeflectTm.Enabled then
-									old = bedwars.ProjectileController.createLocalProjectile
-									bedwars.ProjectileController.createLocalProjectile = function(...)
-										local source, data, proj = ...
-											for _, bowSlot in bows do
-											if hotbarSwitch(bowSlot) then
-												mouse1click()
-												task.wait(0.135)
-												hotbarSwitch(originalSlot)		
-											end
-										end
-										return old(...)
-									end
-								else
-									return
-								end
-							end
-							old = bedwars.ProjectileController.createLocalProjectile
-							bedwars.ProjectileController.createLocalProjectile = function(...)
-								local source, data, proj = ...
-									for _, bowSlot in bows do
-									if hotbarSwitch(bowSlot) then
-										mouse1click()
-										task.wait(0.135)
-										hotbarSwitch(originalSlot)		
-									end
-								end
-								return old(...)
-							end
-						else
-							return
-						end
-					end
-				end))
-				for i, child in blocks:GetDescendants() do
-                	if child:IsA("BasePart") and child.Name == "tnt" or child.Name == "siege_tnt" and Deflect.Enabled then
-						if child:GetAttribute("PlacedByUserId") == lplr.UserId then return end
-						local Distance = (child.Position - entitylib.character.RootPart.Position).Magnitude
-						local nlplr = GetPlayerFromUserID(child:GetAttribute("PlacedByUserId"))
-						if Distance <= Range.Value or 20 then
-							if nlplr.Team == lplr.Team then
-								if DeflectTm.Enabled then
-									old = bedwars.ProjectileController.createLocalProjectile
-									bedwars.ProjectileController.createLocalProjectile = function(...)
-										local source, data, proj = ...
-											for _, bowSlot in bows do
-											if hotbarSwitch(bowSlot) then
-												mouse1click()
-												task.wait(0.135)
-												hotbarSwitch(originalSlot)		
-											end
-										end
-										return old(...)
-									end
-								else
-									return
-								end
-							end
-							old = bedwars.ProjectileController.createLocalProjectile
-							bedwars.ProjectileController.createLocalProjectile = function(...)
-								local source, data, proj = ...
-									for _, bowSlot in bows do
-									if hotbarSwitch(bowSlot) then
-										mouse1click()
-										task.wait(0.135)
-										hotbarSwitch(originalSlot)		
-									end
-								end
-								return old(...)
-							end
-						else
-							return
-						end
-					end
-				end
-			else
-				bedwars.ProjectileController.createLocalProjectile = old
-				old = nil
-			end
-		end,
-		Tooltip = 'Deflects tnt in range'
-	})
-	DeflectTm = Deflect:CreateToggle({
-		Name = "Teammate",
-		Default = false,
-		Tooltip = "Deflects your teammates tnt near you"
-	})
-	LimitToItem = Deflect:CreateToggle({
-		Name = "Limit To Item",
-		Default = false,
-	})
-	Range = Deflect:CreateSlider({
-		Name = "Range",
-		Default = 10,
-		Min = 1,
-		Max = 25,
-		Suffix = function(val)
-			return val == 1 and 'stud' or 'studs'
-		end
-	})
-
-end)
 run(function()
 	local MiloDisguse
 	local Blocks
@@ -16983,6 +16844,5 @@ run(function()
         Tooltip = "Corrects someone when they say hack 🔥"
     })
 end)
-
 
 --notif('Zenwear ☁️', 'Loaded!', 10)
