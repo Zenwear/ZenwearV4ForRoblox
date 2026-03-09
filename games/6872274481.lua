@@ -1901,155 +1901,6 @@ run(function()
 	})
 end)
 	
-local Fly
-local LongJump
-run(function()
-	local Value
-	local VerticalValue
-	local WallCheck
-	local PopBalloons
-	local TP
-	local rayCheck = RaycastParams.new()
-	rayCheck.RespectCanCollide = true
-	local up, down, old = 0, 0
-
-	Fly = vape.Categories.Blatant:CreateModule({
-		Name = 'Fly',
-		Function = function(callback)
-			frictionTable.Fly = callback or nil
-			updateVelocity()
-			if callback then
-				up, down, old = 0, 0, bedwars.BalloonController.deflateBalloon
-				bedwars.BalloonController.deflateBalloon = function() end
-				local tpTick, tpToggle, oldy = tick(), true
-
-				if lplr.Character and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
-					bedwars.BalloonController:inflateBalloon()
-				end
-				Fly:Clean(vapeEvents.AttributeChanged.Event:Connect(function(changed)
-					if changed == 'InflatedBalloons' and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
-						bedwars.BalloonController:inflateBalloon()
-					end
-				end))
-				Fly:Clean(runService.PreSimulation:Connect(function(dt)
-					if entitylib.isAlive and not InfiniteFly.Enabled and isnetworkowner(entitylib.character.RootPart) then
-						local flyAllowed = (lplr.Character:GetAttribute('InflatedBalloons') and lplr.Character:GetAttribute('InflatedBalloons') > 0) or store.matchState == 2
-						local mass = (1.5 + (flyAllowed and 6 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)) + ((up + down) * VerticalValue.Value)
-						local root, moveDirection = entitylib.character.RootPart, entitylib.character.Humanoid.MoveDirection
-						local velo = getSpeed()
-						local destination = (moveDirection * math.max(Value.Value - velo, 0) * dt)
-						rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiFallPart}
-						rayCheck.CollisionGroup = root.CollisionGroup
-
-						if WallCheck.Enabled then
-							local ray = workspace:Raycast(root.Position, destination, rayCheck)
-							if ray then
-								destination = ((ray.Position + ray.Normal) - root.Position)
-							end
-						end
-
-						if not flyAllowed then
-							if tpToggle then
-								local airleft = (tick() - entitylib.character.AirTime)
-								if airleft > 2 then
-									if not oldy then
-										local ray = workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), rayCheck)
-										if ray and TP.Enabled then
-											tpToggle = false
-											oldy = root.Position.Y
-											tpTick = tick() + 0.11
-											root.CFrame = CFrame.lookAlong(Vector3.new(root.Position.X, ray.Position.Y + entitylib.character.HipHeight, root.Position.Z), root.CFrame.LookVector)
-										end
-									end
-								end
-							else
-								if oldy then
-									if tpTick < tick() then
-										local newpos = Vector3.new(root.Position.X, oldy, root.Position.Z)
-										root.CFrame = CFrame.lookAlong(newpos, root.CFrame.LookVector)
-										tpToggle = true
-										oldy = nil
-									else
-										mass = 0
-									end
-								end
-							end
-						end
-
-						root.CFrame += destination
-						root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, mass, 0)
-					end
-				end))
-				Fly:Clean(inputService.InputBegan:Connect(function(input)
-					if not inputService:GetFocusedTextBox() then
-						if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
-							up = 1
-						elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.ButtonL2 then
-							down = -1
-						end
-					end
-				end))
-				Fly:Clean(inputService.InputEnded:Connect(function(input)
-					if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
-						up = 0
-					elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.ButtonL2 then
-						down = 0
-					end
-				end))
-				if inputService.TouchEnabled then
-					pcall(function()
-						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
-						Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
-							up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
-						end))
-					end)
-				end
-			else
-				bedwars.BalloonController.deflateBalloon = old
-				if PopBalloons.Enabled and entitylib.isAlive and (lplr.Character:GetAttribute('InflatedBalloons') or 0) > 0 then
-					for _ = 1, 3 do
-						bedwars.BalloonController:deflateBalloon()
-					end
-				end
-			end
-		end,
-		ExtraText = function()
-			return 'Heatseeker'
-		end,
-		Tooltip = 'Makes you go zoom.'
-	})
-	Value = Fly:CreateSlider({
-		Name = 'Speed',
-		Min = 1,
-		Max = 23,
-		Default = 23,
-		Suffix = function(val)
-			return val == 1 and 'stud' or 'studs'
-		end
-	})
-	VerticalValue = Fly:CreateSlider({
-		Name = 'Vertical Speed',
-		Min = 1,
-		Max = 150,
-		Default = 50,
-		Suffix = function(val)
-			return val == 1 and 'stud' or 'studs'
-		end
-	})
-	WallCheck = Fly:CreateToggle({
-		Name = 'Wall Check',
-		Default = true
-	})
-	PopBalloons = Fly:CreateToggle({
-		Name = 'Pop Balloons',
-		Default = true
-	})
-	TP = Fly:CreateToggle({
-		Name = 'TP Down',
-		Default = true
-	})
-end)
-	
 run(function()
 	local Mode
 	local Expand
@@ -14312,6 +14163,7 @@ run(function()
     })
 end)
 run(function()
+    local Fly
     local Value
     local VerticalValue
     local WallCheck
@@ -14320,7 +14172,7 @@ run(function()
     local lastonground = false
     local MobileButtons
     local FlyAnywayProgressBar = {Enabled = false}
-    local FlyAnywayProgressBarFrame
+    local flyProgressBar
     local rayCheck = RaycastParams.new()
     rayCheck.RespectCanCollide = true
     local up, down, old = 0, 0
@@ -14329,7 +14181,7 @@ run(function()
     local onground = false
     local flyCooldownActive = false
     local lastGroundTouchTime = 0
-    local MAX_FLY_TIME = 2.5
+    local MAX_FLY_TIME = 2
 
     local tick = tick
     local task_wait = task.wait
@@ -14340,14 +14192,14 @@ run(function()
     local vector3zero = Vector3.zero
     local udim2new = UDim2.new
     local cframeLookAlong = CFrame.lookAlong
-    
+
     local cachedBalloonCount = 0
     local lastBalloonCheck = 0
-    local balloonCheckInterval = 0.2 
-    
+    local balloonCheckInterval = 0.2
+
     local cachedMatchState = 0
     local lastMatchStateCheck = 0
-    
+
     local function createMobileButton(name, position, icon)
         local button = Instance.new("TextButton")
         button.Name = name
@@ -14375,70 +14227,61 @@ run(function()
         mobileControls = {}
     end
 
-    local progressBarFrameCounter = 0
     local function updateProgressBar()
-        if not FlyAnywayProgressBarFrame then return end
-        
+        if not flyProgressBar then return end
+
         if not entitylib.isAlive then
-            FlyAnywayProgressBarFrame.Visible = false
+            flyProgressBar:SetVisible(false)
             return
         end
-        
+
         local now = tick()
         if now - lastBalloonCheck > balloonCheckInterval then
             lastBalloonCheck = now
             cachedBalloonCount = lplr.Character:GetAttribute('InflatedBalloons') or 0
             cachedMatchState = store.matchState
         end
-        
+
         local flyAllowed = cachedBalloonCount > 0 or cachedMatchState == 2
-        
+
         if flyAllowed then
-            FlyAnywayProgressBarFrame.Frame.Size = udim2new(1, 0, 0, 20)
-            FlyAnywayProgressBarFrame.TextLabel.Text = "∞"
-            FlyAnywayProgressBarFrame.Visible = FlyAnywayProgressBar.Enabled
+            flyProgressBar:SetProgress(1)
+            flyProgressBar:SetText("∞")
+            flyProgressBar:SetVisible(FlyAnywayProgressBar.Enabled and Fly.Enabled)
             return
         end
-        
-        progressBarFrameCounter = progressBarFrameCounter + 1
-        if progressBarFrameCounter % 3 == 0 then
-            local hipHeight = entitylib.character.Humanoid.HipHeight
-            local checkPos = entitylib.character.HumanoidRootPart.Position + vector3new(0, (hipHeight * -2) - 1, 0)
-            local newray = getPlacedBlock(checkPos)
-            onground = newray ~= nil
-        end
-        
+
+        local hipHeight = entitylib.character.Humanoid.HipHeight
+        local checkPos = entitylib.character.HumanoidRootPart.Position + vector3new(0, (hipHeight * -2) - 1, 0)
+        local newray = getPlacedBlock(checkPos)
+        onground = newray ~= nil
+
         if onground then
             groundtime = nil
             flyCooldownActive = false
             lastGroundTouchTime = now
-            
-            FlyAnywayProgressBarFrame.Frame.Size = udim2new(1, 0, 0, 20)
-            FlyAnywayProgressBarFrame.TextLabel.Text = string_format("%.1fs", MAX_FLY_TIME)
-            FlyAnywayProgressBarFrame.Visible = FlyAnywayProgressBar.Enabled and Fly.Enabled
-            
-            local tween = FlyAnywayProgressBarFrame.Frame:FindFirstChild("Tween")
-            if tween then
-                tween:Destroy()
-            end
+
+            flyProgressBar:SetProgress(1)
+            flyProgressBar:SetText(string_format("%.1fs", MAX_FLY_TIME))
+            flyProgressBar:SetVisible(FlyAnywayProgressBar.Enabled and Fly.Enabled)
         else
             if not groundtime then
                 groundtime = now + MAX_FLY_TIME
                 flyCooldownActive = false
             end
-            
+
             local timeLeft = math_max(0, groundtime - now)
             local progress = timeLeft / MAX_FLY_TIME
-            
-            FlyAnywayProgressBarFrame.Frame.Size = udim2new(progress, 0, 0, 20)
-            FlyAnywayProgressBarFrame.TextLabel.Text = string_format("%.1fs", timeLeft)
-            FlyAnywayProgressBarFrame.Visible = FlyAnywayProgressBar.Enabled and Fly.Enabled
-            
+
+            flyProgressBar:SetProgress(progress)
+            flyProgressBar:SetText(string_format("%.1fs", timeLeft))
+            flyProgressBar:SetVisible(FlyAnywayProgressBar.Enabled and Fly.Enabled)
+
             if timeLeft <= 0 and not flyCooldownActive then
                 flyCooldownActive = true
             end
         end
-        
+
         lastonground = onground
     end
 
@@ -14465,6 +14308,28 @@ run(function()
                     end
                 end))
 
+                if FlyAnywayProgressBar.Enabled then
+                    flyProgressBar = vape.Components.ProgressBar({
+                        Name = "FlyProgressBar",
+                        Size = UDim2.fromOffset(240, 20),
+                        Position = UDim2.new(0.5, 0, 1, -160),
+                        AnchorPoint = Vector2.new(0.5, 0),
+                        BackgroundTransparency = 0.5,
+                        FillColor = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value),
+                        TextColor = Color3.new(0.9, 0.9, 0.9),
+                        TextSize = 20,
+                        Font = Enum.Font.Gotham,
+                        InitialText = "2s",
+                        Visible = false
+                    }, vape.gui)
+                    Fly:Clean(function()
+                        if flyProgressBar then
+                            flyProgressBar:Destroy()
+                            flyProgressBar = nil
+                        end
+                    end)
+                end
+
                 task.spawn(function()
                     repeat
                         task_wait()
@@ -14487,32 +14352,32 @@ run(function()
                 local preSimFrameCounter = 0
                 local lastWallRaycast = 0
                 local wallRaycastInterval = 0.05
-                
+
                 Fly:Clean(runService.PreSimulation:Connect(function(dt)
                     if entitylib.isAlive and not InfiniteFly.Enabled and isnetworkowner(entitylib.character.RootPart) then
                         preSimFrameCounter = preSimFrameCounter + 1
                         local now = tick()
-                        
+
                         if preSimFrameCounter % 12 == 0 then
                             cachedBalloonCount = lplr.Character:GetAttribute('InflatedBalloons') or 0
                             cachedMatchState = store.matchState
                         end
-                        
+
                         local flyAllowed = cachedBalloonCount > 0 or cachedMatchState == 2
-                        
+
                         local oscillation = (now % 0.4 < 0.2) and -1 or 1
                         local mass = (1.95 + (flyAllowed and 6 or 0) * oscillation) + ((up + down) * VerticalValue.Value)
-                        
+
                         local root = entitylib.character.RootPart
                         local moveDirection = entitylib.character.Humanoid.MoveDirection
                         local velo = getSpeed()
                         local destination = (moveDirection * math_max(Value.Value - velo, 0) * dt)
-                        
+
                         if WallCheck.Enabled and (now - lastWallRaycast) > wallRaycastInterval then
                             lastWallRaycast = now
                             rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiVoidPart}
                             rayCheck.CollisionGroup = root.CollisionGroup
-                            
+
                             local ray = workspace:Raycast(root.Position, destination, rayCheck)
                             if ray then
                                 destination = ((ray.Position + ray.Normal) - root.Position)
@@ -14613,9 +14478,6 @@ run(function()
                     end)
                 end
             else
-                if FlyAnywayProgressBarFrame then
-                    FlyAnywayProgressBarFrame.Visible = false
-                end
                 lastonground = nil
                 groundtime = nil
                 flyCooldownActive = false
@@ -14665,45 +14527,6 @@ run(function()
     FlyAnywayProgressBar = Fly:CreateToggle({
         Name = "Progress Bar",
         Function = function(callback)
-            if callback then
-                FlyAnywayProgressBarFrame = Instance.new("Frame")
-                FlyAnywayProgressBarFrame.AnchorPoint = Vector2.new(0.5, 0)
-                FlyAnywayProgressBarFrame.Position = udim2new(0.5, 0, 1, -200)
-                FlyAnywayProgressBarFrame.Size = udim2new(0.2, 0, 0, 20)
-                FlyAnywayProgressBarFrame.BackgroundTransparency = 0.5
-                FlyAnywayProgressBarFrame.BorderSizePixel = 0
-                FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
-                FlyAnywayProgressBarFrame.Visible = false
-                FlyAnywayProgressBarFrame.Parent = vape.gui
-                
-                local FlyAnywayProgressBarFrame2 = Instance.new("Frame")
-                FlyAnywayProgressBarFrame2.Name = "Frame"
-                FlyAnywayProgressBarFrame2.AnchorPoint = Vector2.new(0, 0)
-                FlyAnywayProgressBarFrame2.Position = udim2new(0, 0, 0, 0)
-                FlyAnywayProgressBarFrame2.Size = udim2new(1, 0, 0, 20)
-                FlyAnywayProgressBarFrame2.BackgroundTransparency = 0
-                FlyAnywayProgressBarFrame2.BorderSizePixel = 0
-                FlyAnywayProgressBarFrame2.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
-                FlyAnywayProgressBarFrame2.Visible = true
-                FlyAnywayProgressBarFrame2.Parent = FlyAnywayProgressBarFrame
-                
-                local FlyAnywayProgressBartext = Instance.new("TextLabel")
-                FlyAnywayProgressBartext.Name = "TextLabel"
-                FlyAnywayProgressBartext.Text = "2.5s"
-                FlyAnywayProgressBartext.Font = Enum.Font.Gotham
-                FlyAnywayProgressBartext.TextStrokeTransparency = 0
-                FlyAnywayProgressBartext.TextColor3 = Color3.new(0.9, 0.9, 0.9)
-                FlyAnywayProgressBartext.TextSize = 20
-                FlyAnywayProgressBartext.Size = udim2new(1, 0, 1, 0)
-                FlyAnywayProgressBartext.BackgroundTransparency = 1
-                FlyAnywayProgressBartext.Position = udim2new(0, 0, 0, 0)
-                FlyAnywayProgressBartext.Parent = FlyAnywayProgressBarFrame
-            else
-                if FlyAnywayProgressBarFrame then 
-                    FlyAnywayProgressBarFrame:Destroy() 
-                    FlyAnywayProgressBarFrame = nil 
-                end
-            end
         end,
         Tooltip = "show amount of Fly time",
         Default = true
