@@ -1,4 +1,5 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local mainapi = {
 	Categories = {},
 	GUIColor = {
@@ -2398,6 +2399,75 @@ components = {
 		
 		return optionapi
 	end,
+	ProgressBar = function(optionsettings, parent)
+    local progressBar = {
+        Frame = nil,
+        Fill = nil,
+        Text = nil,
+    }
+
+    local outerFrame = Instance.new("Frame")
+    outerFrame.Name = optionsettings.Name or "ProgressBar"
+    outerFrame.Size = optionsettings.Size or UDim2.fromOffset(200, 20)
+    outerFrame.Position = optionsettings.Position or UDim2.new(0.5, 0, 1, -200)
+    outerFrame.AnchorPoint = optionsettings.AnchorPoint or Vector2.new(0.5, 0)
+    outerFrame.BackgroundColor3 = optionsettings.BackgroundColor or Color3.new(0, 0, 0)
+    outerFrame.BackgroundTransparency = optionsettings.BackgroundTransparency or 0.5
+    outerFrame.BorderSizePixel = 0
+    outerFrame.Visible = optionsettings.Visible or false
+    outerFrame.Parent = parent
+
+    local fillFrame = Instance.new("Frame")
+    fillFrame.Name = "Fill"
+    fillFrame.Size = UDim2.fromScale(1, 1)
+    fillFrame.Position = UDim2.fromScale(0, 0)
+    fillFrame.AnchorPoint = Vector2.new(0, 0)
+    fillFrame.BackgroundColor3 = optionsettings.FillColor or Color3.fromHSV(0.46, 0.96, 0.52)
+    fillFrame.BackgroundTransparency = 0
+    fillFrame.BorderSizePixel = 0
+    fillFrame.Parent = outerFrame
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "Text"
+    textLabel.Size = UDim2.fromScale(1, 1)
+    textLabel.Position = UDim2.fromScale(0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = optionsettings.InitialText or ""
+    textLabel.TextColor3 = optionsettings.TextColor or Color3.new(0.9, 0.9, 0.9)
+    textLabel.TextSize = optionsettings.TextSize or 20
+    textLabel.Font = optionsettings.Font or Enum.Font.Gotham
+    textLabel.TextStrokeTransparency = optionsettings.TextStrokeTransparency or 0
+    textLabel.Parent = outerFrame
+
+    progressBar.Frame = outerFrame
+    progressBar.Fill = fillFrame
+    progressBar.Text = textLabel
+
+    function progressBar:SetProgress(percent)
+        self.Fill.Size = UDim2.fromScale(math.clamp(percent, 0, 1), 1)
+    end
+
+    function progressBar:SetText(text)
+        self.Text.Text = text
+    end
+
+    function progressBar:SetColor(color3)
+        self.Fill.BackgroundColor3 = color3
+    end
+
+    function progressBar:SetVisible(visible)
+        self.Frame.Visible = visible
+    end
+
+    function progressBar:Destroy()
+        if self.Frame then
+            self.Frame:Destroy()
+        end
+        table.clear(self)
+    end
+
+    return progressBar
+end,
 	Divider = function(children, text)
 		local divider = Instance.new('Frame')
 		divider.Name = 'Divider'
