@@ -16800,7 +16800,7 @@ run(function()
 
 					if Mode.Value == 'Always' then
 						shouldActivate = true
-					elseif Mode.Value == 'In Combat' then
+					elseif Mode.Value == 'Combat Only' then
 						local enemies = entitylib.AllPosition({
 							Range = EnemyRange.Value,
 							Part = 'RootPart',
