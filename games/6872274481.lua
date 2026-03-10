@@ -2498,57 +2498,7 @@ run(function()
 		Darker = true,
 		Visible = false
 	})
-	Limit = Killaura:CreateToggle({
-		Name = 'Limit to items',
-		Function = function(callback)
-			if inputService.TouchEnabled and Killaura.Enabled then
-				pcall(function()
-					lplr.PlayerGui.MobileUI['2'].Visible = callback
-				end)
-			end
-		end,
-		Tooltip = 'Only attacks when the sword is held'
-	})
-	LegitAura = Killaura:CreateToggle({
-		Name = 'Swing only',
-		Tooltip = 'Only attacks while swinging manually'
-	})
---[[
-	AirHit = Killaura:CreateToggle({
-		Name = 'AirHit+',
-		Function = function(callback)
-			AirHitChance.Object.Visible = callback
-			AirHitRange.Object.Visible = callback
-			VerticalCheck.Object.Visible = callback
-		end,
-		Tooltip = 'attack targets that are airborne'
-	})
 
-	AirHitChance = Killaura:CreateSlider({
-		Name = 'AirHit Chance',
-		Min = 1,
-		Max = 100,
-		Default = 90,
-		Suffix = '%',
-		Visible = false
-	})
-
-	AirHitRange = Killaura:CreateSlider({
-		Name = 'AirHit Range',
-		Min = 1,
-		Max = 18,
-		Default = 18,
-		Suffix = 'studs',
-		Visible = false
-	})]]
-
-	VerticalCheck = Killaura:CreateToggle({
-		Name = 'Velocity Check',
-		Default = true,
-		Visible = false,
-		Tooltip = 'Only hits if the target has upward/downward momentum.'
-	})
-end)
 	
 run(function()
 	local Value
