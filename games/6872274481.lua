@@ -1,4 +1,5 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -3117,6 +3118,9 @@ run(function()
 	local AutoJump
 	local AlwaysJump
 	local rayCheck = RaycastParams.new()
+	local flyEnabled = Fly and Fly.Enabled
+	local infFlyEnabled = InfiniteFly and InfiniteFly.Enabled
+	local longJumpEnabled = LongJump and LongJump.Enabled
 	rayCheck.RespectCanCollide = true
 	
 	Speed = vape.Categories.Blatant:CreateModule({
@@ -3131,7 +3135,7 @@ run(function()
 			if callback then
 				Speed:Clean(runService.PreSimulation:Connect(function(dt)
 					bedwars.StatefulEntityKnockbackController.lastImpulseTime = callback and math.huge or time()
-					if entitylib.isAlive and not Fly.Enabled and not InfiniteFly.Enabled and not LongJump.Enabled and isnetworkowner(entitylib.character.RootPart) then
+					if entitylib.isAlive and not flyEnabled and not infFlyEnabled and not longJumpEnabled and isnetworkowner(entitylib.character.RootPart) then
 						local state = entitylib.character.Humanoid:GetState()
 						if state == Enum.HumanoidStateType.Climbing then return end
 	
@@ -15262,7 +15266,7 @@ run(function()
 		end
 	end
 
-	BetterDavey = vape.Categories.World:CreateModule({
+	BetterDavey = vape.Categories.Kit:CreateModule({
 		Name = 'AutoDavey',
 		Function = function(callback)
 			if callback then
@@ -16837,5 +16841,56 @@ run(function()
 	})
 end)
 
-																										
+run(function()
+    local AntiSuffocate
+
+    local function isSuffocating()
+        local character = entitylib.character
+        if not character then return false end
+
+        local headPos = character.Head.Position
+        local headBlock = getPlacedBlock(bedwars.BlockController:getBlockPosition(headPos) * 3)
+        
+        local rootPos = character.RootPart.Position
+        local rootBlock = getPlacedBlock(bedwars.BlockController:getBlockPosition(rootPos) * 3)
+        
+        return headBlock or rootBlock
+    end
+
+    local function AntiSuffocation()
+        local character = entitylib.character
+        if not character then return end
+        
+        local positions = {
+            character.Head.Position,
+            character.RootPart.Position,
+            character.RootPart.Position + Vector3.new(0, 1, 0),
+            character.RootPart.Position - Vector3.new(0, 1, 0)
+        }
+        
+        for _, pos in pairs(positions) do
+            local blockPos = bedwars.BlockController:getBlockPosition(pos) * 3
+            local block = getPlacedBlock(blockPos)
+            
+            if block then
+                character.RootPart.CFrame = character.RootPart.CFrame + Vector3.new(0, 3, 0)
+            end
+        end
+    end
+
+    AntiSuffocate = vape.Categories.World:CreateModule({
+        Name = 'AntiSuffocate',
+        Function = function(callback)
+            if callback then
+                AntiSuffocate:Clean(runService.Heartbeat:Connect(function()
+                    if isSuffocating() then
+                        AntiSuffocation()
+                    end
+                end))
+            end
+        end,
+        Tooltip = 'Prevents you from being suffocated.'
+    })
+end)
+																								
 --notif('Zenwear ☁️', 'Loaded!', 10)
