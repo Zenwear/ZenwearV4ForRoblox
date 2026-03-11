@@ -18524,7 +18524,7 @@ run(function()
     })
 end)
 run(function()
-	local Ambience1 = vape.Categories.Render:CreateModule({
+	local Ambience1 = vape.Categories.Utility:CreateModule({
 		Name = "Ambience 1",
 		Function = function(callback)
 			local lighting = game:GetService("Lighting")
@@ -18548,7 +18548,7 @@ run(function()
 	})
 end)
 run(function()
-	local Ambience2 = vape.Categories.Render:CreateModule({
+	local Ambience2 = vape.Categories.Utility:CreateModule({
 		Name = "Ambience 2",
 		Function = function(callback)
 			local lighting = game:GetService("Lighting")
@@ -18572,7 +18572,7 @@ run(function()
 	})
 end)
 run(function()
-	local Ambience1 = vape.Catetask.Render:CreateModule({
+	local Ambience1 = vape.Catetask.Utility:CreateModule({
 		Name = "Ambience 1",
 		Function = function(callback)
 			local lighting = game:GetService("Lighting")
