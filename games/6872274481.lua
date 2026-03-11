@@ -18523,3 +18523,28 @@ run(function()
         Tooltip = 'Prevents you from being suffocated.'
     })
 end)
+run(function()
+	local Ambience1 = vape.Categories.Render:CreateModule({
+		Name = "Ambience 1",
+		Function = function(callback)
+			local lighting = game:GetService("Lighting")
+			if callback then
+				local sky = Instance.new("Sky")
+				sky.Name = "Ambience1_Sky"
+				local id = "rbxassetid://122785120445164"
+				sky.SkyboxBk = id
+				sky.SkyboxDn = id
+				sky.SkyboxFt = id
+				sky.SkyboxLf = id
+				sky.SkyboxRt = id
+				sky.SkyboxUp = id
+				sky.Parent = lighting
+			else
+				local sky = lighting:FindFirstChild("Ambience1_Sky")
+				if sky then sky:Destroy() end
+			end
+		end,
+		Tooltip = "Ambience 1"
+	})
+end)
+																																																																						
