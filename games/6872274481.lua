@@ -18572,7 +18572,7 @@ run(function()
 	})
 end)
 run(function()
-	local Ambience1 = vape.Categories.CloudWare:CreateModule({
+	local Ambience1 = vape.Catetask.Render:CreateModule({
 		Name = "Ambience 1",
 		Function = function(callback)
 			local lighting = game:GetService("Lighting")
