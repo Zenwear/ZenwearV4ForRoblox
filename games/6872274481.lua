@@ -18322,13 +18322,13 @@ run(function()
 end)
 run(function()
 	local Ambience2 = vape.Categories.Render:CreateModule({
-		Name = "nebula",
+		Name = "sunset",
 		Function = function(callback)
 			local lighting = game:GetService("Lighting")
 			if callback then
 				local sky = Instance.new("Sky")
 				sky.Name = "Ambience2_Sky"
-				local id = "rbxassetid://121826915456627"
+				local id = "rbxassetid://106124354971466"
 				sky.SkyboxBk = id
 				sky.SkyboxDn = id
 				sky.SkyboxFt = id
@@ -18508,7 +18508,7 @@ run(function()
 		abilityRemote = eventsFolder and eventsFolder:FindFirstChild("useAbility")
 	end)
 
-	AutoBerserker = vape.Categories.Utility:CreateModule({
+	AutoBerserker = vape.Categories.kit:CreateModule({
 		Name = 'AutoBerserker',
 		Function = function(callback)
 			if callback then
