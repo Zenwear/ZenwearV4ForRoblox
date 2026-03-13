@@ -19503,7 +19503,7 @@ run(function()
 end)
 run(function()
 	local Lobby
-	Lobby = vape.Categories.Exploits:CreateModule({
+	Lobby = vape.Cattask.Utility:CreateModule({
 		Name = 'Lobby',
 		Tooltip = 'allows you to lobby if u dont have access to the chat(like me not letting jews get my face)',
 		Function = function(callback)
