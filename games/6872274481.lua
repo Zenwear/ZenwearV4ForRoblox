@@ -19501,27 +19501,7 @@ run(function()
 		end
 	})
 end)
-run(function()
-	local Lobby
-	Lobby = vapetask.Blatent:CreateModule({
-		Name = 'Lobby',
-		Tooltip = 'allows you to lobby if u dont have access to the chat(like me not letting jews get my face)',
-		Function = function(callback)
-			if not callback then
-				return
-			end
-			Lobby:Toggle(false)
-			local s,err = pcall(function()
-				bedwars.Client:Get("TeleportToLobby"):SendToServer()
-			end)
-			if not s then
-				warn(err)
-				task.wait(8)
-				lobby()
-			end
-		end
-	})
-end)
+
 																																					
 
 
