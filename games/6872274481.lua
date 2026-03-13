@@ -19283,6 +19283,110 @@ run(function()
 		Tooltip = 'Applies layered clothing from your Roblox avatar, client-sided. Persists through death.'
 	})
 end)
+																																						run(function()
+	local BetterMelody
+    local Limits
+    local Targetted
+    local Angle
+    local Distance
+    local Delay
+	local UpdateRate
+	local Health
+	BetterMelody = vape.Categories.Kits:CreateModule({
+		Name = "BetterMelody",
+		Tooltip = 'makes u godtier at melody boi',
+		Function = function(callback)
+			if callback then
+				if store.equippedKit ~= 'melody' then
+					notify('BetterMelody', 'Kit required only!', 6, 'warning')
+					return
+				end
+				repeat
+					if entitylib.isAlive then
+						if Limits.Enabled then
+							local tool = (store and store.hand and store.hand.tool) and store.hand.tool or nil
+							if not tool or tool.Name ~= "guitar" then continue end
+						end
+						local plr = playersService:FindFirstChild(Targetted)
+						if plr then
+							if (plr.Character.HumanoidRootPart.Positionn - entitylib.character.RootPart).Magnitude <= (Distance.Value) then
+								local root = entitylib.character.RootPart
+								local delta = plr.Character.HumanoidRootPart.Position - root.Position
+								local localfacing = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+								if angle >= (math.rad(Angle.Value) / 2) then continue end
+								if plr.Character:GetAttribute("Health") <= Health.Value then
+									bedwars.Client:Get(remotes.GuitarHeal):SendToServer({
+										healTarget = plr.Character
+									})
+									task.wait(1 / Delay.GetRandomValue())
+								else
+									task.wait(1 / Delay.GetRandomValue())
+									continue
+								end
+							else
+								continue
+							end
+						else
+							continue
+						end
+					end
+					task.wait(1 / UpdateRate.Value)
+				until MelodyExploit.Enabled
+			end
+		end
+	})
+	Targetted = BetterMelody:CreateTextBox({
+		Name = "Username",
+		Tooltip = 'this must be the users USERNAME not DISPLAYNAME',
+		Placeholder = 'Roblox'
+	})
+	Distance = BetterMelody:CreateSlider({
+		Name = "Heal Distance",
+		Min = 0,
+		Max = 45,
+		Default = 15,
+		Decimal = 5,
+		Suffix = function(v)
+			if v == 1 then
+				return 'stud'
+			else
+				return 'studs'
+			end
+		end
+	})
+	Angle = BetterMelody:CreateSlider({
+		Name = "Angle",
+		Min = 0,
+		Max = 360,
+		Default = 180
+	})
+	UpdateRate = BetterMelody:CreateSlider({
+		Name = "Update Rate",
+		Min = 0,
+		Max = 120,
+		Default = 60,
+		Suffix = 'hz'
+	})
+	Health = BetterMelody:CreateSlider({
+		Name = "Health",
+		Min = 0,
+		Max = 100,
+		Default = 75,
+		Suffix = '%',
+		Decimal = 5,
+	})	
+	Delay = BetterMelody:CreateTwoSlider({
+		Name = "Delay",
+		Min = 0,
+		Max = 2,
+		DefaultMin = 0.2,
+		DefaultMax = 0.7
+	})
+	Limits = BetterMelody:CreateToggle({Name="Limit to items"})
+
+end)
+
         
                                     
     
