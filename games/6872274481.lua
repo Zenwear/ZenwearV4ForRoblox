@@ -19522,6 +19522,455 @@ run(function()
 		end
 	})
 end)
+run(function()
+    local BetterKaida
+	local isCasting = false
+	local UpdateRate
+    local CastDistance
+    local AttackRange
+    local Angle
+    local Targets
+	local CastChecks
+	local MaxTargets
+	local Sorts
+	local GUICheck
+	local CanAttack = true
+    BetterKaida = vape.Categories.Kit:CreateModule({
+        Name = "BetterKaida",
+        Tooltip = "Killaura-style Kaida",
+        Function = function(callback)
+			if role ~= "owner" and role ~= "coowner" and role ~= "admin" and role ~= "friend" and role ~= "premium" and role ~= "user"then
+				vape:CreateNotification("Onyx", "You don’t have access to this.", 10, "alert")
+				return
+			end 
+			if store.equippedKit ~= "summoner" then
+				vape:CreateNotification("BetterKaida","Kit required only!",8,"warning")
+				return
+			end
+			if callback then
+				repeat
+		            local plrs = entitylib.AllPosition({
+		                Range = AttackRange.Value,
+		                Wallcheck = Targets.Walls.Enabled,
+		                Part = "RootPart",
+		                Players = Targets.Players.Enabled,
+		                NPCs = Targets.NPCs.Enabled,
+		                Limit = MaxTargets.Value,
+		                Sort = sortmethods[Sorts.Value]
+		            })
+					local castplrs = nil
+
+					if CastChecks.Enabled then
+						castplrs = entitylib.AllPosition({
+							Range = CastDistance.Value,
+							Wallcheck = Targets.Walls.Enabled,
+							Part = "RootPart",
+							Players = Targets.Players.Enabled,
+							NPCs = Targets.NPCs.Enabled,
+							Limit = MaxTargets.Value,
+							Sort = sortmethods[Sorts.Value]
+		            	})
+					end
+		
+		            local char = entitylib.character
+		            local root = char.RootPart
+					if lplr.Character:GetAttribute("Casting") or lplr.Character:GetAttribute("UsingAbility") or	lplr.Character:GetAttribute("SummonerCasting") then
+						isCasting = true
+					end
+		            if plrs then
+		                local ent = plrs[1]
+		                if ent and ent.RootPart and CanAttack then
+							CanAttack = false
+		                    local delta = ent.RootPart.Position - root.Position
+		                    local localFacing = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+		                    local angle = math.acos(localFacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+		                    if angle > (math.rad(Angle.Value) / 2) then task.wait(0.1); continue end
+							if isCasting then task.wait(0.05); continue end
+								if GUICheck.Enabled then
+									if bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then task.wait(0.1); continue end
+								end
+		                        local localPosition = root.Position
+		                        local shootDir = CFrame.lookAt(localPosition, ent.RootPart.Position).LookVector
+		                        localPosition = localPosition + shootDir * math.max((localPosition - ent.RootPart.Position).Magnitude - 16, 0)
+		                        bedwars.AnimationUtil:playAnimation(lplr, bedwars.GameAnimationUtil:getAssetId(bedwars.AnimationType.SUMMONER_CHARACTER_SWIPE),{looped = false})
+		
+		                        task.spawn(function()
+										local KaidaSkin = 'Summoner_DragonClaw'
+										local ApplyRGB = false
+										if bedwars.KitController:getKitSkin(lplr.Character) == bedwars.BedwarsKitSkin.WITCH_KAIDA then
+											KaidaSkin = "Witch_Summoner_DragonClaw"
+											ApplyRGB = false
+										elseif bedwars.KitController:getKitSkin(lplr.Character) == bedwars.BedwarsKitSkin.SNOWANGEL_KAIDA then
+											KaidaSkin = "SnowAngel_Summoner_DragonClaw"
+											ApplyRGB = false
+										elseif bedwars.KitController:getKitSkin(lplr.Character) == bedwars.BedwarsKitSkin.PRISMATIC_KAIDA then
+											KaidaSkin = "Summoner_DragonClaw"
+											ApplyRGB = true
+										else
+											KaidaSkin = "Summoner_DragonClaw"
+											ApplyRGB = false
+										end
+		                                local clawModel = replicatedStorage.Assets.Misc.Kaida[KaidaSkin]:Clone()
+		                                clawModel.Parent = workspace
+										task.spawn(function()
+											local levelclaw = lplr:GetAttribute('Summoner_ClawLevel') or 1
+											local claw1 = Color3.fromRGB(66,66,66)
+											local claw2 = Color3.fromRGB(176,182,195)
+											local claw3 = Color3.fromRGB(43,229,229)
+											local claw4 = Color3.fromRGB(49,229,94)
+											if levelclaw == 1 then
+												clawModel:FindFirstChild('dragon_claw_nail_mesh').Color = claw1
+											elseif levelclaw == 2 then
+												clawModel:FindFirstChild('dragon_claw_nail_mesh').Color = claw2
+											elseif levelclaw == 3 then
+												clawModel:FindFirstChild('dragon_claw_nail_mesh').Color = claw3
+											elseif levelclaw == 4 then
+												clawModel:FindFirstChild('dragon_claw_nail_mesh').Color = claw4
+											else
+												clawModel:FindFirstChild('dragon_claw_nail_mesh').Color = claw2
+											end
+										end)
+										if ApplyRGB then
+											bedwars.SummonerKitSkinController.applyClawRGB(clawModel)											
+										end
+		                                if gameCamera.CFrame.Position and (gameCamera.CFrame.Position - root.Position).Magnitude < 1 then
+		                                    for _, part in clawModel:GetDescendants() do
+		                                        if part:IsA("MeshPart") then
+		                                            part.Transparency = 0.6
+		                                        end
+		                                    end
+		                                end
+		
+		                                local unitDir = Vector3.new(shootDir.X, 0, shootDir.Z).Unit
+		                                local startPos = root.Position + unitDir:Cross(Vector3.new(0, 1, 0)).Unit * -5 + unitDir * 6
+		                                local direction = (startPos + shootDir * 13 - startPos).Unit
+		                                clawModel:PivotTo(CFrame.new(startPos, startPos + direction))
+		                                clawModel.PrimaryPart.Anchored = true
+		
+		                                if clawModel:FindFirstChild("AnimationController") then
+		                                    local animator = clawModel.AnimationController:FindFirstChildOfClass("Animator")
+		                                    if animator then
+		                                        bedwars.AnimationUtil:playAnimation(animator,bedwars.GameAnimationUtil:getAssetId(bedwars.AnimationType.SUMMONER_CLAW_ATTACK),{looped = false, speed = 1})
+		                                    end
+		                                end
+										bedwars.Client:Get(remotes.SummonerClawAttack):SendToServer({
+											position = localPosition,
+											direction = shootDir,
+											clientTime = workspace:GetServerTimeNow()
+										})
+										task.spawn(function()
+												local sounds = {
+													bedwars.SoundList.SUMMONER_CLAW_ATTACK_1,
+													bedwars.SoundList.SUMMONER_CLAW_ATTACK_2,
+													bedwars.SoundList.SUMMONER_CLAW_ATTACK_3,
+													bedwars.SoundList.SUMMONER_CLAW_ATTACK_4
+												}
+												bedwars.SoundManager:playSound(sounds[math.random(1, #sounds)], { position = root.Position })
+
+												task.spawn(function()
+													task.wait(0.75)
+													clawModel:Destroy()
+												end)
+												task.wait(0.68)
+												CanAttack = true
+										end)
+		                        end)
+		                    end
+		            end
+					if castplrs then
+		                local ent = castplrs[1]
+		                if ent and ent.RootPart and CanAttack then
+							if CastChecks.Enabled then
+								CanAttack = false
+								if bedwars.AbilityController:canUseAbility('summoner_start_charging') then
+									bedwars.AbilityController:useAbility('summoner_start_charging')
+									task.wait(1)
+									if bedwars.AbilityController:canUseAbility('summoner_finish_charging') then
+										bedwars.AbilityController:useAbility('summoner_finish_charging')
+									else
+										task.wait(0.95)
+										bedwars.AbilityController:useAbility('summoner_finish_charging')
+									end
+								end
+								task.wait(0.68)
+								CanAttack = true
+							end
+						end
+					end
+					task.wait(1 / UpdateRate.Value)
+				until not BetterKaida.Enabled
+			end
+        end
+    })
+    Targets = BetterKaida:CreateTargets({
+        Players = true,
+        NPCs = true,
+        Walls = true
+    })
+	Sorts = BetterKaida:CreateDropdown({
+		Name = "Sorts",
+		List = {'Damage','Threat','Kit','Health','Angle'}
+	})
+	MaxTargets = BetterKaida:CreateSlider({
+		Name = "Max Targets",
+		Min = 1,
+		Max = 5,
+		Default = 2
+	})
+    CastDistance = BetterKaida:CreateSlider({
+        Name = "Cast Distance",
+        Min = 1,
+        Max = 10,
+        Default = 5,
+		Visible = false
+    })
+	CastChecks = BetterKaida:CreateToggle({
+		Name = "Cast Checks",
+		Tooltip = 'this allows you to use the cast ability',
+		Default = false,
+		Function = function(v)
+			CastDistance.Object.Visible = v
+		end
+	})
+    Angle = BetterKaida:CreateSlider({
+        Name = "Angle",
+        Min = 0,
+        Max = 360,
+        Default = 180
+    })
+    AttackRange = BetterKaida:CreateSlider({
+        Name = "Attack Range",
+        Min = 1,
+        Max = 18,
+        Default = 18,
+        Suffix = function(val) return val == 1 and "stud" or "studs" end
+    })
+	UpdateRate = BetterKaida:CreateSlider({
+		Name = 'Update rate',
+		Min = 1,
+		Max = 360,
+		Default = 60,
+		Suffix = 'hz'
+	})
+	GUICheck = BetterKaida:CreateToggle({Name='GUI Check'})
+end)
+run(function()
+	local BetterCait
+	local distance
+	BetterCait = vape.Categories.Kit:CreateModule({
+		Name = 'BetterCaitlyn',
+		Function = function(callback)
+			if store.equippedKit ~= "blood_assassin" then
+				vape:CreateNotification("BetterCaitlyn","Kit required only!",8,"warning")
+				return
+			end
+			local hitPlayers = {} 
+				
+			BetterCait:Clean(vapeEvents.EntityDamageEvent.Event:Connect(function(damageTable)
+				if not entitylib.isAlive then return end
+					
+				local attacker = playersService:GetPlayerFromCharacter(damageTable.fromEntity)
+				local victim = playersService:GetPlayerFromCharacter(damageTable.entityInstance)
+				
+				if attacker == lplr and victim and victim ~= lplr then
+					local dis = (attacker.Character.HumanoidRootPart.Position - entitylib.character.RootPart.Position).Magnitude
+					if dis <= distance.Value then
+						hitPlayers[victim] = true
+					
+						local storeState = bedwars.Store:getState()
+						local activeContract = storeState.Kit.activeContract
+						local availableContracts = storeState.Kit.availableContracts or {}
+							
+						if not activeContract then
+							for _, contract in availableContracts do
+								if contract.target == victim then
+									bedwars.Client:Get('BloodAssassinSelectContract'):SendToServer({
+										contractId = contract.id
+									})
+									break
+								end
+							end
+						end
+					end
+				end
+			end))
+			repeat task.wait(0.01) until not entitylib.isAlive or not BetterCait.Enabled
+			table.clear(hitPlayers)
+		end,
+		Tooltip = 'Makes you look better with caitlyn'
+	})
+	distance = BetterCait:CreateSlider({
+		Name = "Distance",
+		Max = 32,
+		Min = 1,
+		Default = 16,
+		Suffix = 'studs'
+	})
+end)
+run(function()
+local BackTrack
+	local NetworkClient = cloneref(game:GetService("NetworkClient"))
+	local NetworkSettings = settings():GetService("NetworkSettings")
+	local BackTrackIncoming
+	local KPS
+	local Ticks
+	local Lag
+	local heartbeatDt = 1 / 60
+	runService.Heartbeat:Connect(function(dt)
+		heartbeatDt = dt
+	end)
+
+	local function applyNetwork()
+		if not BackTrack.Enabled then
+			NetworkClient:SetOutgoingKBPSLimit(math.huge)
+			NetworkSettings.IncomingReplicationLag = 0
+			return
+		end
+
+		NetworkClient:SetOutgoingKBPSLimit(math.max(1, KPS.Value))
+
+		if BackTrackIncoming.Enabled then
+			local tickLag = Ticks.Value * heartbeatDt
+			local baseLag = Lag.Value / 1000
+
+			local finalLag = math.clamp(baseLag + tickLag, 0, 5)
+			NetworkSettings.IncomingReplicationLag = finalLag
+		else
+			NetworkSettings.IncomingReplicationLag = 0
+		end
+	end
+
+	 BackTrack = vape.Categories.Blatent:CreateModule({
+		Name = "BackTrack",
+		Tooltip = "PositionRaper",
+		Function = function(callback)
+			if callback then
+				applyNetwork()
+			else
+				NetworkClient:SetOutgoingKBPSLimit(math.huge)
+				NetworkSettings.IncomingReplicationLag = 0
+			end
+		end
+	})
+
+	BackTrackIncoming = BackTrack:CreateToggle({
+		Name = "Incoming",
+		Default = true,
+		Function = function()
+			applyNetwork()
+		end
+	})
+
+	KPS = BackTrack:CreateSlider({
+		Name = "KPS Limit",
+		Min = 1,
+		Max = 250,
+		Default = 25,
+		Function = function()
+			applyNetwork()
+		end
+	})
+
+	Ticks = BackTrack:CreateSlider({
+		Name = "Ticks",
+		Min = 0,
+		Max = 30,
+		Default = 8,
+		Function = function()
+			applyNetwork()
+		end
+	})
+
+	Lag = BackTrack:CreateSlider({
+		Name = "Lag",
+		Min = 0,
+		Max = 1000,
+		Default = 362,
+		Suffix = 'ms',		
+		Function = function()
+			applyNetwork()
+		end
+	})
+end)
+run(function()
+	local FlyY 
+	local Fly
+	local Heal
+	local HealthHP
+	local AutoSummon
+	local PlrUserTxt
+	local isWhispering = false
+	local BetterWhisper
+	local rayCheck = RaycastParams.new()
+	rayCheck.RespectCanCollide = true
+
+    BetterWhisper = vape.Categories.Kit:CreateModule({
+        Name = 'BetterWhisper',
+        Function = function(callback)
+			if role ~= "owner" and role ~= "coowner" and role ~= "admin" and role ~= "friend" and role ~= "premium"and role ~= "user"then
+				vape:CreateNotification("Onyx", "You don’t have access to this.", 10, "alert")
+				return
+			end	
+            if callback then
+			if store.equippedKit ~= "owl" then
+				vape:CreateNotification("BetterWhisper","Kit required only!",8,"warning")
+				return
+			end
+				BetterWhisper:Clean(bedwars.Client:Get("OwlSummoned"):Connect(function(plr,target)
+					if plr == lplr then
+						local chr = target.Character
+						local hum = chr:FindFirstChild('Humanoid')
+						local root = chr:FindFirstChild('HumanoidRootPart')
+						isWhispering = true
+						repeat
+							rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
+							rayCheck.CollisionGroup = root.CollisionGroup
+
+							if Fly.Enabled and root.Velocity.Y <= FlyY.Value and not workspace:Raycast(root.Position, Vector3.new(0, -100, 0), rayCheck) then
+								WhisperController:request("Fly")
+							end
+							if Heal.Enabled and hum.Health <= HealthHP.Value then
+								WhisperController:request("Heal")
+							end
+							task.wait(0.05)
+						until not isWhispering or not BetterWhisper.Enabled
+					end
+				end))
+				BetterWhisper:Clean(bedwars.Client:Get("OwlDeattached"):Connect(function(plr)
+					if plr == lplr then
+						isWhispering = false
+					end
+				end))
+			else
+				isWhispering = false
+			end
+        end,
+        Tooltip = "Better whisper skills and u look like u play like therac!"
+    })
+	FlyY = BetterWhisper:CreateSlider({
+		Name = 'Y-Level fly',																																																																							
+		Min = -50,
+		Max = -100,
+		Default = -90,
+	})	
+	HealthHP = BetterWhisper:CreateSlider({
+		Name = 'Heal HP',																																																																							
+		Min = 1,
+		Max = 99,
+		Default = 80,
+	})	
+	Fly = BetterWhisper:CreateToggle({
+		Name = 'Fly',
+		Default = true,
+	})
+	Heal = BetterWhisper:CreateToggle({
+		Name = 'Heal',
+		Default = true,
+	})
+end)
+
+				
+
 
 																																					
 
