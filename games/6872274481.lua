@@ -18877,7 +18877,7 @@ run(function()
         end
     end
     
-    AutoNoelle = vape.Categories.Kits:CreateModule({
+    AutoNoelle = vape.Categories.Kit:CreateModule({
         Name = "AutoNoelle",
         Function = function(callback)
             running = callback
@@ -19603,7 +19603,7 @@ run(function()
         end
     end
 
-    Grove = vape.Categories.Kits:CreateModule({
+    Grove = vape.Categories.Kit:CreateModule({
         Name = 'AutoGrove',
         Function = function(callback)
             if callback then
