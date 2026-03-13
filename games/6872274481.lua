@@ -18657,4 +18657,1146 @@ run(function()
         Tooltip = "Semi disables the ac with 3 different ways"
     })
 end)
+run(function()
+    local AutoNoelle
+    local HealSlimeToggle
+    local HealSlimeDropdown
+    local HealSlimeRefresh
+    local VoidSlimeToggle
+    local VoidSlimeDropdown
+    local VoidSlimeRefresh
+    local StickySlimeToggle
+    local StickySlimeDropdown
+    local StickySlimeRefresh
+    local FrostySlimeToggle
+    local FrostySlimeDropdown
+    local FrostySlimeRefresh
+    
+    local running = false
+    local slimeCheckThread = nil
+    
+    local SLIME_TYPES = {
+        HEALING = 0,
+        VOID = 1,
+        STICKY = 2,
+        FROSTY = 3
+    }
+    
+    local SLIME_NAMES = {
+        [SLIME_TYPES.HEALING] = "Blessed Slime",
+        [SLIME_TYPES.VOID] = "Void Slime",
+        [SLIME_TYPES.STICKY] = "Sticky Slime",
+        [SLIME_TYPES.FROSTY] = "Frosty Slime"
+    }
+    
+    local function getTeammateList()
+        local teammates = {"None"}
+        local myTeam = lplr:GetAttribute('Team')
+        
+        if not myTeam then return teammates end
+        
+        for _, player in playersService:GetPlayers() do
+            if player ~= lplr then
+                local playerTeam = player:GetAttribute('Team')
+                if playerTeam and playerTeam == myTeam then
+                    table.insert(teammates, player.Name)
+                end
+            end
+        end
+        
+        table.sort(teammates)
+        return teammates
+    end
+    
+    local function getMySlimes()
+        local mySlimes = {}
+        
+        for _, slimeData in collectionService:GetTagged('SlimeData') do
+            if slimeData:WaitForChild("Tamer", 0.1) and slimeData.Tamer.Value == lplr.UserId then
+                local slimeType = slimeData:GetAttribute("SlimeType")
+                local slimeId = slimeData:GetAttribute("Id")
+                
+                if slimeType ~= nil and slimeId ~= nil then
+                    if not mySlimes[slimeType] then
+                        mySlimes[slimeType] = {}
+                    end
+                    table.insert(mySlimes[slimeType], {
+                        data = slimeData,
+                        id = slimeId,
+                        type = slimeType
+                    })
+                end
+            end
+        end
+        
+        return mySlimes
+    end
+    
+    local function getSlimeCurrentTarget(slimeData)
+        if not slimeData or not slimeData:FindFirstChild("Following") then
+            return nil
+        end
+        
+        local followingUserId = slimeData.Following.Value
+        if followingUserId == 0 or followingUserId ~= followingUserId or not followingUserId then
+            return nil
+        end
+        
+        return playersService:GetPlayerByUserId(followingUserId)
+    end
+    
+    local function moveSlimeToPlayer(slimeId, targetPlayer)
+        if not targetPlayer then return false end
+        
+        pcall(function()
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
+                :WaitForChild("useAbility")
+                :FireServer("SLIME_DIRECT")
+            
+            task.wait(0.05)
+            
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("rbxts_include")
+                :WaitForChild("node_modules")
+                :WaitForChild("@rbxts")
+                :WaitForChild("net")
+                :WaitForChild("out")
+                :WaitForChild("_NetManaged")
+                :WaitForChild("RequestMoveSlime")
+                :InvokeServer({
+                    slimeId = slimeId,
+                    targetPlayerUserId = targetPlayer.UserId
+                })
+        end)
+        
+        return true
+    end
+    
+    local function retractSlimeToSelf(slimeId)
+        pcall(function()
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
+                :WaitForChild("useAbility")
+                :FireServer("SLIME_DIRECT")
+            
+            task.wait(0.05)
+            
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("rbxts_include")
+                :WaitForChild("node_modules")
+                :WaitForChild("@rbxts")
+                :WaitForChild("net")
+                :WaitForChild("out")
+                :WaitForChild("_NetManaged")
+                :WaitForChild("RequestMoveSlime")
+                :InvokeServer({
+                    slimeId = slimeId,
+                    targetPlayerUserId = lplr.UserId
+                })
+        end)
+    end
+    
+    local function manageSlimeType(slimeType, targetDropdown)
+        local targetName = targetDropdown.Value
+        
+        local mySlimes = getMySlimes()
+        local slimesOfType = mySlimes[slimeType]
+        
+        if not slimesOfType or #slimesOfType == 0 then
+            return
+        end
+        
+        if targetName == "None" or targetName == "" then
+            for _, slimeInfo in ipairs(slimesOfType) do
+                local currentTarget = getSlimeCurrentTarget(slimeInfo.data)
+                
+                if currentTarget and currentTarget ~= lplr then
+                    retractSlimeToSelf(slimeInfo.id)
+                    task.wait(0.15)
+                end
+            end
+            return
+        end
+        
+        local targetPlayer = playersService:FindFirstChild(targetName)
+        if not targetPlayer then
+            return
+        end
+        
+        if not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            return
+        end
+        
+        for _, slimeInfo in ipairs(slimesOfType) do
+            local currentTarget = getSlimeCurrentTarget(slimeInfo.data)
+            
+            if currentTarget ~= targetPlayer then
+                moveSlimeToPlayer(slimeInfo.id, targetPlayer)
+                task.wait(0.15)
+            end
+        end
+    end
+    
+    local function startSlimeManagement()
+        if slimeCheckThread then
+            task.cancel(slimeCheckThread)
+            slimeCheckThread = nil
+        end
+        
+        running = true
+        slimeCheckThread = task.spawn(function()
+            while running and AutoNoelle.Enabled do
+                if HealSlimeToggle.Enabled then
+                    manageSlimeType(SLIME_TYPES.HEALING, HealSlimeDropdown)
+                end
+                
+                if VoidSlimeToggle.Enabled then
+                    manageSlimeType(SLIME_TYPES.VOID, VoidSlimeDropdown)
+                end
+                
+                if StickySlimeToggle.Enabled then
+                    manageSlimeType(SLIME_TYPES.STICKY, StickySlimeDropdown)
+                end
+                
+                if FrostySlimeToggle.Enabled then
+                    manageSlimeType(SLIME_TYPES.FROSTY, FrostySlimeDropdown)
+                end
+                
+                task.wait(1.5)
+            end
+            slimeCheckThread = nil
+        end)
+    end
+    
+    local function stopSlimeManagement()
+        running = false
+        if slimeCheckThread then
+            task.cancel(slimeCheckThread)
+            slimeCheckThread = nil
+        end
+    end
+    
+    AutoNoelle = vape.Categories.Kits:CreateModule({
+        Name = "AutoNoelle",
+        Function = function(callback)
+            running = callback
+            
+            if callback then
+                startSlimeManagement()
+                
+                AutoNoelle:Clean(playersService.PlayerAdded:Connect(function()
+                    task.wait(0.5)
+                    local newList = getTeammateList()
+                    if HealSlimeDropdown then HealSlimeDropdown:Change(newList) end
+                    if VoidSlimeDropdown then VoidSlimeDropdown:Change(newList) end
+                    if StickySlimeDropdown then StickySlimeDropdown:Change(newList) end
+                    if FrostySlimeDropdown then FrostySlimeDropdown:Change(newList) end
+                end))
+                
+                AutoNoelle:Clean(playersService.PlayerRemoving:Connect(function()
+                    task.wait(0.5)
+                    local newList = getTeammateList()
+                    if HealSlimeDropdown then HealSlimeDropdown:Change(newList) end
+                    if VoidSlimeDropdown then VoidSlimeDropdown:Change(newList) end
+                    if StickySlimeDropdown then StickySlimeDropdown:Change(newList) end
+                    if FrostySlimeDropdown then FrostySlimeDropdown:Change(newList) end
+                end))
+                
+                AutoNoelle:Clean(lplr:GetAttributeChangedSignal('Team'):Connect(function()
+                    task.wait(1)
+                    local newList = getTeammateList()
+                    if HealSlimeDropdown then HealSlimeDropdown:Change(newList) end
+                    if VoidSlimeDropdown then VoidSlimeDropdown:Change(newList) end
+                    if StickySlimeDropdown then StickySlimeDropdown:Change(newList) end
+                    if FrostySlimeDropdown then FrostySlimeDropdown:Change(newList) end
+                end))
+            else
+                stopSlimeManagement()
+            end
+        end,
+        Tooltip = "Automatically manages slimes to follow specific teammates"
+    })
+    
+    HealSlimeToggle = AutoNoelle:CreateToggle({
+        Name = "Heal Slime",
+        Default = false,
+        Tooltip = "Assign heal slime to teammate",
+        Function = function(callback)
+            if HealSlimeDropdown and HealSlimeDropdown.Object then
+                HealSlimeDropdown.Object.Visible = callback
+            end
+            if HealSlimeRefresh and HealSlimeRefresh.Object then
+                HealSlimeRefresh.Object.Visible = callback
+            end
+            
+            if callback and AutoNoelle.Enabled then
+                startSlimeManagement()
+            end
+        end
+    })
+    
+    HealSlimeDropdown = AutoNoelle:CreateDropdown({
+        Name = "Heal Target",
+        List = getTeammateList(),
+        Function = function(val)
+        end,
+        Tooltip = "Select teammate for heal slime"
+    })
+    
+    HealSlimeRefresh = AutoNoelle:CreateButton({
+        Name = "Refresh Heal List",
+        Function = function()
+            task.spawn(function()
+                local newList = getTeammateList()
+                
+                if HealSlimeDropdown then
+                    pcall(function()
+                        HealSlimeDropdown:Change(newList)
+                        
+                        if #newList > 0 then
+                            if not HealSlimeDropdown.Value or HealSlimeDropdown.Value == "" or not table.find(newList, HealSlimeDropdown.Value) then
+                                HealSlimeDropdown:SetValue(newList[1])
+                            else
+                                HealSlimeDropdown:SetValue(HealSlimeDropdown.Value)
+                            end
+                        end
+                    end)
+                end
+                
+                notif("Auto Noelle", string.format("Refreshed heal list (%d teammates)", #newList - 1), 2)
+            end)
+        end,
+        Tooltip = "Manually refresh heal teammate list"
+    })
+    
+    VoidSlimeToggle = AutoNoelle:CreateToggle({
+        Name = "Damage Slime",
+        Default = false,
+        Tooltip = "Assign Damage slime to teammate",
+        Function = function(callback)
+            if VoidSlimeDropdown and VoidSlimeDropdown.Object then
+                VoidSlimeDropdown.Object.Visible = callback
+            end
+            if VoidSlimeRefresh and VoidSlimeRefresh.Object then
+                VoidSlimeRefresh.Object.Visible = callback
+            end
+            
+            if callback and AutoNoelle.Enabled then
+                startSlimeManagement()
+            end
+        end
+    })
+    
+    VoidSlimeDropdown = AutoNoelle:CreateDropdown({
+        Name = "Damage Target",
+        List = getTeammateList(),
+        Function = function(val)
+        end,
+        Tooltip = "Select teammate for Damage slime"
+    })
+    
+    VoidSlimeRefresh = AutoNoelle:CreateButton({
+        Name = "Refresh Damage List",
+        Function = function()
+            task.spawn(function()
+                local newList = getTeammateList()
+                
+                if VoidSlimeDropdown then
+                    pcall(function()
+                        VoidSlimeDropdown:Change(newList)
+                        
+                        if #newList > 0 then
+                            if not VoidSlimeDropdown.Value or VoidSlimeDropdown.Value == "" or not table.find(newList, VoidSlimeDropdown.Value) then
+                                VoidSlimeDropdown:SetValue(newList[1])
+                            else
+                                VoidSlimeDropdown:SetValue(VoidSlimeDropdown.Value)
+                            end
+                        end
+                    end)
+                end
+                
+                notif("Auto Noelle", string.format("Refreshed Damage list (%d teammates)", #newList - 1), 2)
+            end)
+        end,
+        Tooltip = "Manually refresh Damage teammate list"
+    })
+    
+    StickySlimeToggle = AutoNoelle:CreateToggle({
+        Name = "Cycle Slime",
+        Default = false,
+        Tooltip = "Assign cycle slime to teammate",
+        Function = function(callback)
+            if StickySlimeDropdown and StickySlimeDropdown.Object then
+                StickySlimeDropdown.Object.Visible = callback
+            end
+            if StickySlimeRefresh and StickySlimeRefresh.Object then
+                StickySlimeRefresh.Object.Visible = callback
+            end
+            
+            if callback and AutoNoelle.Enabled then
+                startSlimeManagement()
+            end
+        end
+    })
+    
+    StickySlimeDropdown = AutoNoelle:CreateDropdown({
+        Name = "Cycle Target",
+        List = getTeammateList(),
+        Function = function(val)
+        end,
+        Tooltip = "Select teammate for cycle slime"
+    })
+    
+    StickySlimeRefresh = AutoNoelle:CreateButton({
+        Name = "Refresh Cycle List",
+        Function = function()
+            task.spawn(function()
+                local newList = getTeammateList()
+                
+                if StickySlimeDropdown then
+                    pcall(function()
+                        StickySlimeDropdown:Change(newList)
+                        
+                        if #newList > 0 then
+                            if not StickySlimeDropdown.Value or StickySlimeDropdown.Value == "" or not table.find(newList, StickySlimeDropdown.Value) then
+                                StickySlimeDropdown:SetValue(newList[1])
+                            else
+                                StickySlimeDropdown:SetValue(StickySlimeDropdown.Value)
+                            end
+                        end
+                    end)
+                end
+                
+                notif("Auto Noelle", string.format("Refreshed Cycle list (%d teammates)", #newList - 1), 2)
+            end)
+        end,
+        Tooltip = "Manually refresh Cycle teammate list"
+    })
+    
+    FrostySlimeToggle = AutoNoelle:CreateToggle({
+        Name = "Slow Slime",
+        Default = false,
+        Tooltip = "Assign Slow slime to teammate",
+        Function = function(callback)
+            if FrostySlimeDropdown and FrostySlimeDropdown.Object then
+                FrostySlimeDropdown.Object.Visible = callback
+            end
+            if FrostySlimeRefresh and FrostySlimeRefresh.Object then
+                FrostySlimeRefresh.Object.Visible = callback
+            end
+            
+            if callback and AutoNoelle.Enabled then
+                startSlimeManagement()
+            end
+        end
+    })
+    
+    FrostySlimeDropdown = AutoNoelle:CreateDropdown({
+        Name = "Slow Target",
+        List = getTeammateList(),
+        Function = function(val)
+        end,
+        Tooltip = "Select teammate for slow slime"
+    })
+    
+    FrostySlimeRefresh = AutoNoelle:CreateButton({
+        Name = "Refresh Slow List",
+        Function = function()
+            task.spawn(function()
+                local newList = getTeammateList()
+                
+                if FrostySlimeDropdown then
+                    pcall(function()
+                        FrostySlimeDropdown:Change(newList)
+                        
+                        if #newList > 0 then
+                            if not FrostySlimeDropdown.Value or FrostySlimeDropdown.Value == "" or not table.find(newList, FrostySlimeDropdown.Value) then
+                                FrostySlimeDropdown:SetValue(newList[1])
+                            else
+                                FrostySlimeDropdown:SetValue(FrostySlimeDropdown.Value)
+                            end
+                        end
+                    end)
+                end
+                
+                notif("Auto Noelle", string.format("Refreshed slow list (%d teammates)", #newList - 1), 2)
+            end)
+        end,
+        Tooltip = "Manually refresh slow teammate list"
+    })
+end)
+run(function()
+	local LayeredClothing
+	local desc
+	local myUserId = lplr.UserId
+	local activeConnection = nil
+	local isRunning = false
+
+	local function itemAdded(v, manual)
+		if (not v:GetAttribute('LayeredClothing')) and (
+			(v:IsA('Accessory') and (not v:GetAttribute('InvItem')) and (not v:GetAttribute('ArmorSlot')))
+			or v:IsA('ShirtGraphic') or v:IsA('Shirt') or v:IsA('Pants') or v:IsA('BodyColors') or manual
+		) then
+			repeat
+				task.wait()
+				v.Parent = game
+			until v.Parent == game
+			v:ClearAllChildren()
+			v:Destroy()
+		end
+	end
+
+	local function disconnectActive()
+		if activeConnection then
+			activeConnection:Disconnect()
+			activeConnection = nil
+		end
+	end
+
+	local function cleanup()
+		disconnectActive()
+		if desc then
+			desc:Destroy()
+			desc = nil
+		end
+	end
+
+	local function characterAdded(char)
+		if not LayeredClothing.Enabled then return end
+		if not char then return end
+
+		disconnectActive()
+
+		task.wait(0.1)
+
+		char.Archivable = true
+		local clone = char:Clone()
+		clone.Parent = game
+
+		local fetchedDesc = nil
+		repeat
+			if pcall(function()
+				fetchedDesc = playersService:GetHumanoidDescriptionFromUserId(myUserId)
+			end) and fetchedDesc then break end
+			task.wait(1)
+		until not LayeredClothing.Enabled
+
+		if not LayeredClothing.Enabled or not fetchedDesc then
+			clone:ClearAllChildren()
+			clone:Destroy()
+			return
+		end
+
+		local humanoid = char:FindFirstChildOfClass('Humanoid')
+		local originalDesc = humanoid and humanoid:FindFirstChildOfClass('HumanoidDescription')
+		if originalDesc then
+			fetchedDesc.JumpAnimation = originalDesc.JumpAnimation
+			fetchedDesc.HeightScale = originalDesc.HeightScale
+		end
+
+		for _, v in ipairs(clone:GetChildren()) do
+			if v:IsA('Accessory') or v:IsA('ShirtGraphic') or v:IsA('Shirt') or v:IsA('Pants') then
+				v:ClearAllChildren()
+				v:Destroy()
+			end
+		end
+
+		local cloneHumanoid = clone:FindFirstChildOfClass('Humanoid')
+		if cloneHumanoid then
+			cloneHumanoid:ApplyDescriptionClientServer(fetchedDesc)
+		end
+
+		for _, v in ipairs(char:GetChildren()) do
+			itemAdded(v)
+		end
+
+		activeConnection = char.ChildAdded:Connect(itemAdded)
+
+		local animateClone = clone:FindFirstChild('Animate')
+		local animateReal = char:FindFirstChild('Animate')
+		if animateClone and animateReal then
+			for _, v in ipairs(animateClone:GetChildren()) do
+				local real = animateReal:FindFirstChild(v.Name)
+				if real then
+					local anim = v:FindFirstChildWhichIsA('Animation')
+					local realanim = real:FindFirstChildWhichIsA('Animation')
+					if anim and realanim then
+						realanim.AnimationId = anim.AnimationId
+					end
+				end
+			end
+		end
+
+		local head = char:FindFirstChild('Head')
+		for _, v in ipairs(clone:GetChildren()) do
+			v:SetAttribute('LayeredClothing', true)
+			if v:IsA('Accessory') then
+				for _, v2 in ipairs(v:GetDescendants()) do
+					if v2:IsA('Weld') and v2.Part1 then
+						local part = char:FindFirstChild(v2.Part1.Name)
+						if part then v2.Part1 = part end
+					end
+				end
+				v.Parent = char
+			elseif v:IsA('ShirtGraphic') or v:IsA('Shirt') or v:IsA('Pants') or v:IsA('BodyColors') then
+				v.Parent = char
+			elseif head and v.Name == 'Head' and head:IsA('MeshPart') and not head:FindFirstChild('FaceControls') then
+				head.MeshId = v.MeshId
+			end
+		end
+
+		local localface = char:FindFirstChild('face', true)
+		local cloneface = clone:FindFirstChild('face', true)
+		if localface and cloneface then
+			itemAdded(localface, true)
+			if head then
+				cloneface.Parent = head
+			end
+		end
+
+		if originalDesc then
+			pcall(function()
+				originalDesc:SetEmotes(fetchedDesc:GetEmotes())
+				originalDesc:SetEquippedEmotes(fetchedDesc:GetEquippedEmotes())
+			end)
+		end
+
+		task.wait(0.5)
+		clone:ClearAllChildren()
+		clone:Destroy()
+		fetchedDesc:Destroy()
+	end
+
+	LayeredClothing = vape.Categories.Render:CreateModule({
+		Name = 'LayeredClothing',
+		Function = function(callback)
+			if callback then
+				LayeredClothing:Clean(entitylib.Events.LocalAdded:Connect(characterAdded))
+				if entitylib.isAlive then
+					characterAdded(entitylib.character)
+				end
+			else
+				cleanup()
+			end
+		end,
+		Tooltip = 'Applies layered clothing from your Roblox avatar, client-sided. Persists through death.'
+	})
+end)
+run(function()
+    local Grove
+    local NoSlow
+    local NoSlowOnAbility
+    local AutoWater
+    local AutoWaterRange
+    local AutoCollect
+    local CollectRange
+    local SpiritESP
+    local ESPNotify
+    local ESPBackground
+    local ESPColor
+    local DistanceCheck
+    local DistanceLimit
+    
+    local Folder = Instance.new('Folder')
+    Folder.Parent = vape.gui
+    local Reference = {}
+    local lastNotification = 0
+    local spawnQueue = {}
+    local notificationCooldown = 1
+    local noSlowActive = false
+    local autoWaterActive = false
+    local autoCollectActive = false
+    local originalDisableActionsOnCharge
+    local originalCheckForPickup
+    
+    local function sendNotification(count)
+        notif("Spirit ESP", string.format("%d spirit orbs spawned", count), 3)
+    end
+
+    local function processSpawnQueue()
+        if #spawnQueue > 0 then
+            local currentTime = tick()
+            if currentTime - lastNotification >= notificationCooldown then
+                sendNotification(#spawnQueue)
+                lastNotification = currentTime
+                spawnQueue = {}
+            else
+                task.delay(notificationCooldown - (currentTime - lastNotification), function()
+                    if #spawnQueue > 0 then
+                        sendNotification(#spawnQueue)
+                        spawnQueue = {}
+                    end
+                end)
+            end
+        end
+    end
+
+    local function getProperImage()
+        return bedwars.getIcon({itemType = 'spirit'}, true)
+    end
+
+    local function Added(v)
+        if Reference[v] then return end
+        
+        local billboard = Instance.new('BillboardGui')
+        billboard.Parent = Folder
+        billboard.Name = 'spirit-energy'
+        billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+        billboard.Size = UDim2.fromOffset(36, 36)
+        billboard.AlwaysOnTop = true
+        billboard.ClipsDescendants = false
+        billboard.Adornee = v
+        
+        local blur = addBlur(billboard)
+        blur.Visible = ESPBackground.Enabled
+        
+        local image = Instance.new('ImageLabel')
+        image.Size = UDim2.fromOffset(36, 36)
+        image.Position = UDim2.fromScale(0.5, 0.5)
+        image.AnchorPoint = Vector2.new(0.5, 0.5)
+        image.BackgroundColor3 = Color3.fromHSV(ESPColor.Hue, ESPColor.Sat, ESPColor.Value)
+        image.BackgroundTransparency = 1 - (ESPBackground.Enabled and ESPColor.Opacity or 0)
+        image.BorderSizePixel = 0
+        image.Image = getProperImage()
+        image.Parent = billboard
+        
+        local uicorner = Instance.new('UICorner')
+        uicorner.CornerRadius = UDim.new(0, 4)
+        uicorner.Parent = image
+        
+        Reference[v] = billboard
+        
+        if ESPNotify.Enabled then
+            table.insert(spawnQueue, {item = 'spirit', time = tick()})
+            processSpawnQueue()
+        end
+    end
+
+    local function Removed(v)
+        if Reference[v] then
+            Reference[v]:Destroy()
+            Reference[v] = nil
+        end
+    end
+
+    local function setupESP()
+        for _, v in workspace:GetChildren() do
+            if v.Name == "SpiritGardenerEnergy" and v:IsA("Model") and v.PrimaryPart then
+                Added(v.PrimaryPart)
+            end
+        end
+
+        Grove:Clean(workspace.ChildAdded:Connect(function(v)
+            if v.Name == "SpiritGardenerEnergy" and v:IsA("Model") then
+                task.wait(0.1)
+                if v.PrimaryPart then
+                    Added(v.PrimaryPart)
+                end
+            end
+        end))
+
+        Grove:Clean(workspace.ChildRemoved:Connect(function(v)
+            if v.Name == "SpiritGardenerEnergy" and v.PrimaryPart then
+                Removed(v.PrimaryPart)
+            end
+        end))
+
+        Grove:Clean(runService.RenderStepped:Connect(function()
+            if not SpiritESP.Enabled then return end
+            
+            for v, billboard in pairs(Reference) do
+                if not v or not v.Parent then
+                    Removed(v)
+                    continue
+                end
+
+                local shouldShow = true
+
+                if shouldShow and DistanceCheck.Enabled and entitylib.isAlive then
+                    local distance = (entitylib.character.RootPart.Position - v.Position).Magnitude
+                    if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
+                        shouldShow = false
+                    end
+                end
+
+                billboard.Enabled = shouldShow
+            end
+        end))
+    end
+
+    local function getNearbyFlowers()
+        local flowers = {}
+        if not entitylib.isAlive then return flowers end
+        
+        local localPosition = entitylib.character.RootPart.Position
+        local range = AutoWaterRange.Value
+        
+        for _, v in collectionService:GetTagged('SpiritGardenerFlower') do
+            if v:IsA("Model") and v.PrimaryPart then
+                if v:GetAttribute("PlacedByUserId") == lplr.UserId then
+                    local needsEnergy = not v:GetAttribute("HasFullyGrown")
+                    if needsEnergy then
+                        local distance = (localPosition - v.PrimaryPart.Position).Magnitude
+                        if distance <= range then
+                            table.insert(flowers, v)
+                        end
+                    end
+                end
+            end
+        end
+        
+        return flowers
+    end
+
+    local function useWaterAbility()
+        local success = pcall(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events"):WaitForChild("useAbility"):FireServer("spirit_gardener_water")
+        end)
+        return success
+    end
+
+    local function startAutoWater()
+        if autoWaterActive then return end
+        autoWaterActive = true
+        
+        task.spawn(function()
+            while Grove.Enabled and AutoWater.Enabled and autoWaterActive do
+                if not entitylib.isAlive then 
+                    task.wait(0.5)
+                    continue 
+                end
+                
+                local flowers = getNearbyFlowers()
+                
+                if #flowers > 0 then
+                    if useWaterAbility() then
+                        task.wait(0.6) 
+                    else
+                        task.wait(0.3)
+                    end
+                else
+                    task.wait(0.5)
+                end
+            end
+            
+            autoWaterActive = false
+        end)
+    end
+
+    local function stopAutoWater()
+        autoWaterActive = false
+    end
+
+    local function hookAutoCollect()
+        if not bedwars.SpiritGardenerSeedController then return end
+        
+        originalCheckForPickup = bedwars.SpiritGardenerSeedController.checkForPickup
+        
+        bedwars.SpiritGardenerSeedController.checkForPickup = function(self)
+            if not AutoCollect.Enabled then
+                return originalCheckForPickup(self)
+            end
+            
+            local Players = game:GetService("Players")
+            local CollectionService = game:GetService("CollectionService")
+            local Workspace = game:GetService("Workspace")
+            
+            local Character = Players.LocalPlayer.Character
+            if not Character or not Character.PrimaryPart then
+                return nil
+            end
+            
+            local localPosition = Character.PrimaryPart.Position
+            local range = CollectRange.Value
+            
+            local validTypes = self:validCollectableEntityTypes()
+            
+            for _, collectableType in validTypes do
+                local tagged = CollectionService:GetTagged(collectableType)
+                
+                for _, orb in tagged do
+                    local spawnTime = orb:GetAttribute("SpawnTime")
+                    if spawnTime and (Workspace:GetServerTimeNow() - spawnTime) >= 1 then
+                        local orbPosition = orb:GetPivot().Position
+                        local distance = (localPosition - orbPosition).Magnitude
+                        
+                        if distance <= range then
+                            self:collectEntity(Players.LocalPlayer, orb, collectableType)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local function unhookAutoCollect()
+        if originalCheckForPickup and bedwars.SpiritGardenerSeedController then
+            bedwars.SpiritGardenerSeedController.checkForPickup = originalCheckForPickup
+        end
+    end
+
+    local function startAutoCollect()
+        if autoCollectActive then return end
+        autoCollectActive = true
+        
+        hookAutoCollect()
+        
+        if bedwars.SpiritGardenerSeedController then
+            pcall(function()
+                bedwars.SpiritGardenerSeedController:listenToPickup()
+            end)
+        end
+    end
+
+    local function stopAutoCollect()
+        autoCollectActive = false
+        unhookAutoCollect()
+    end
+
+    local function hookNoSlow()
+        if not bedwars.SpiritGardenerController then return end
+        
+        originalDisableActionsOnCharge = bedwars.SpiritGardenerController.disableActionsOnCharge
+        
+        bedwars.SpiritGardenerController.disableActionsOnCharge = function(self, maid, character)
+            if not NoSlow.Enabled then
+                return originalDisableActionsOnCharge(self, maid, character)
+            end
+            
+            if NoSlowOnAbility.Enabled then
+                local isLocalPlayer = character == lplr.Character
+                if not isLocalPlayer then
+                    return originalDisableActionsOnCharge(self, maid, character)
+                end
+            end
+            
+            if character == lplr.Character then
+                local KnitClient = bedwars.KnitClient
+                
+                KnitClient.Controllers.SwordController:toggleSwordSwing(true)
+                KnitClient.Controllers.BlockPlacementController:disableBlockPlacer()
+                
+                local ClientSyncEvents = debug.getupvalue(originalDisableActionsOnCharge, 3)
+                local projectileConnection = ClientSyncEvents.BeginProjectileTargeting:connect(function(event)
+                    event:setCancelled(true)
+                    return nil
+                end)
+                
+                local jumpModifier = KnitClient.Controllers.JumpHeightController:getJumpModifier():addModifier({
+                    jumpHeightMultiplier = 0;
+                })
+                
+                maid:GiveTask(function()
+                    KnitClient.Controllers.SwordController:toggleSwordSwing(false)
+                    KnitClient.Controllers.BlockPlacementController:enableBlockPlacer()
+                    projectileConnection:Destroy()
+                    jumpModifier.Destroy()
+                end)
+            end
+        end
+    end
+
+    local function unhookNoSlow()
+        if originalDisableActionsOnCharge and bedwars.SpiritGardenerController then
+            bedwars.SpiritGardenerController.disableActionsOnCharge = originalDisableActionsOnCharge
+        end
+    end
+
+    Grove = vape.Categories.Kits:CreateModule({
+        Name = 'AutoGrove',
+        Function = function(callback)
+            if callback then
+                if SpiritESP.Enabled then 
+                    setupESP() 
+                end
+                
+                if NoSlow.Enabled then
+                    hookNoSlow()
+                end
+                
+                if AutoWater.Enabled then
+                    startAutoWater()
+                end
+                
+                if AutoCollect.Enabled then
+                    startAutoCollect()
+                end
+            else
+                stopAutoWater()
+                stopAutoCollect()
+                unhookNoSlow()
+                Folder:ClearAllChildren()
+                table.clear(Reference)
+                table.clear(spawnQueue)
+                lastNotification = 0
+            end
+        end,
+        Tooltip = 'Spirit Gardener kit features - NoSlow, Auto Water, Auto Collect, and Spirit ESP'
+    })
+    
+    NoSlow = Grove:CreateToggle({
+        Name = 'No Slow',
+        Default = false,
+        Tooltip = 'Remove movement lock when using water ability',
+        Function = function(callback)
+            if NoSlowOnAbility and NoSlowOnAbility.Object then 
+                NoSlowOnAbility.Object.Visible = callback 
+            end
+            
+            if Grove.Enabled then
+                if callback then
+                    hookNoSlow()
+                else
+                    unhookNoSlow()
+                end
+            end
+        end
+    })
+    
+    NoSlowOnAbility = Grove:CreateToggle({
+        Name = 'Only On Ability Use',
+        Default = false,
+        Tooltip = 'NoSlow only works when you manually use the ability'
+    })
+    
+    AutoWater = Grove:CreateToggle({
+        Name = 'Auto Water',
+        Default = false,
+        Tooltip = 'Automatically water nearby flowers that need energy',
+        Function = function(callback)
+            if AutoWaterRange and AutoWaterRange.Object then 
+                AutoWaterRange.Object.Visible = callback 
+            end
+            
+            if Grove.Enabled then
+                if callback then
+                    startAutoWater()
+                else
+                    stopAutoWater()
+                end
+            end
+        end
+    })
+    
+    AutoWaterRange = Grove:CreateSlider({
+        Name = 'Water Range',
+        Min = 1, 
+        Max = 30,
+        Default = 20,
+        Decimal = 1,
+        Suffix = ' studs',
+        Tooltip = 'Distance to auto water flowers'
+    })
+    
+    AutoCollect = Grove:CreateToggle({
+        Name = 'Auto Collect',
+        Default = false,
+        Tooltip = 'Automatically collect spirit energy orbs from extended range',
+        Function = function(callback)
+            if CollectRange and CollectRange.Object then 
+                CollectRange.Object.Visible = callback 
+            end
+            
+            if Grove.Enabled then
+                if callback then
+                    startAutoCollect()
+                else
+                    stopAutoCollect()
+                end
+            end
+        end
+    })
+    
+    CollectRange = Grove:CreateSlider({
+        Name = 'Collect Range',
+        Min = 5, 
+        Max = 12,
+        Default = 12,
+        Decimal = 10,
+        Suffix = ' studs',
+        Tooltip = 'Distance to auto collect spirit orbs (default: 5.5)'
+    })
+    
+    SpiritESP = Grove:CreateToggle({
+        Name = 'Spirit ESP',
+        Default = false,
+        Tooltip = 'Shows spirit energy orb locations',
+        Function = function(callback)
+            if ESPNotify and ESPNotify.Object then ESPNotify.Object.Visible = callback end
+            if ESPBackground and ESPBackground.Object then ESPBackground.Object.Visible = callback end
+            if ESPColor and ESPColor.Object then ESPColor.Object.Visible = callback end
+            if DistanceCheck and DistanceCheck.Object then DistanceCheck.Object.Visible = callback end
+            if DistanceLimit and DistanceLimit.Object then
+                DistanceLimit.Object.Visible = (callback and DistanceCheck.Enabled)
+            end
+            
+            if Grove.Enabled then
+                if callback then 
+                    setupESP() 
+                else
+                    Folder:ClearAllChildren()
+                    table.clear(Reference)
+                end
+            end
+        end
+    })
+    
+    ESPNotify = Grove:CreateToggle({
+        Name = 'Notify',
+        Default = false,
+        Tooltip = 'Get notifications when spirit orbs spawn'
+    })
+    
+    ESPBackground = Grove:CreateToggle({
+        Name = 'Background',
+        Default = true,
+        Function = function(callback)
+            if ESPColor and ESPColor.Object then ESPColor.Object.Visible = callback end
+            for _, v in Reference do
+                if v and v:FindFirstChild("ImageLabel") then
+                    local blur = v:FindFirstChild("BlurEffect")
+                    if blur then blur.Visible = callback end
+                    v.ImageLabel.BackgroundTransparency = 1 - (callback and ESPColor.Opacity or 0)
+                end
+            end
+        end
+    })
+    
+    ESPColor = Grove:CreateColorSlider({
+        Name = 'Background Color',
+        DefaultValue = 0.5,
+        DefaultOpacity = 0.5,
+        Function = function(hue, sat, val, opacity)
+            for _, v in Reference do
+                if v and v:FindFirstChild("ImageLabel") then
+                    v.ImageLabel.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
+                    v.ImageLabel.BackgroundTransparency = 1 - opacity
+                end
+            end
+        end,
+        Darker = true
+    })
+    
+    DistanceCheck = Grove:CreateToggle({
+        Name = 'Distance Check',
+        Default = false,
+        Tooltip = 'Only show spirit orbs within distance range',
+        Function = function(callback)
+            if DistanceLimit and DistanceLimit.Object then
+                DistanceLimit.Object.Visible = callback
+            end
+        end
+    })
+    
+    DistanceLimit = Grove:CreateTwoSlider({
+        Name = 'Spirit Distance',
+        Min = 0,
+        Max = 256,
+        DefaultMin = 0,
+        DefaultMax = 64,
+        Darker = true,
+        Tooltip = 'Distance range for showing spirit orbs'
+    })
+end)
 																																																																						
