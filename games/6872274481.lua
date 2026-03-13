@@ -19386,6 +19386,122 @@ end)
 	Limits = BetterMelody:CreateToggle({Name="Limit to items"})
 
 end)
+run(function()	
+
+	NM = vape.Categories.Render:CreateModule({
+		Name = 'Nightmare Emote',
+		Tooltip = 'Client-Sided nightmare emote, animation is Server-Side visuals are Client-Sided',
+		Function = function(callback)
+			if callback then				
+				local CharForNM = lplr.Character
+				
+				if not CharForNM then return end
+				
+				local NightmareEmote = replicatedStorage:WaitForChild("Assets"):WaitForChild("Effects"):WaitForChild("NightmareEmote"):Clone()
+				asset = NightmareEmote
+				NightmareEmote.Parent = game.Workspace
+				lastPosition = CharForNM.PrimaryPart and CharForNM.PrimaryPart.Position or Vector3.new()
+				
+				task.spawn(function()
+					while asset ~= nil do
+						local currentPosition = CharForNM.PrimaryPart and CharForNM.PrimaryPart.Position
+						if currentPosition and (currentPosition - lastPosition).Magnitude > 0.1 then
+							asset:Destroy()
+							asset = nil
+							NM:Toggle()
+							break
+						end
+						lastPosition = currentPosition
+						NightmareEmote:SetPrimaryPartCFrame(CharForNM.LowerTorso.CFrame + Vector3.new(0, -2, 0))
+						task.wait(0.1)
+					end
+				end)
+				
+				local NMDescendants = NightmareEmote:GetDescendants()
+				local function PartStuff(Prt)
+					if Prt:IsA("BasePart") then
+						Prt.CanCollide = false
+						Prt.Anchored = true
+					end
+				end
+				for i, v in ipairs(NMDescendants) do
+					PartStuff(v, i - 1, NMDescendants)
+				end
+				local Outer = NightmareEmote:FindFirstChild("Outer")
+				if Outer then
+					tweenService:Create(Outer, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {
+						Orientation = Outer.Orientation + Vector3.new(0, 360, 0)
+					}):Play()
+				end
+				local Middle = NightmareEmote:FindFirstChild("Middle")
+				if Middle then
+					tweenService:Create(Middle, TweenInfo.new(12.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {
+						Orientation = Middle.Orientation + Vector3.new(0, -360, 0)
+					}):Play()
+				end
+                anim = Instance.new("Animation")
+				anim.AnimationId = "rbxassetid://9191822700"
+				anim = CharForNM.Humanoid:LoadAnimation(anim)
+				anim:Play()
+			else 
+                if anim then 
+					anim:Stop()
+					anim = nil
+				end
+				if asset then
+					asset:Destroy() 
+					asset = nil
+				end
+			end
+		end
+	})
+end)
+run(function()
+	local GetHost = {}
+	GetHost = vape.Categories.Render:CreateModule({
+		Name = "GetHost",
+		Tooltip = "this module is only for show. None of the settings will work.",
+		Function = function(callback) 
+			if callback then
+				lplr:SetAttribute("CustomMatchRole", "host")
+			else
+				lplr:SetAttribute("CustomMatchRole", nil)
+			end	
+		end
+	})
+end)
+run(function()
+    local PlayerLevel
+	local level 
+	local old
+
+	PlayerLevel = vape.Categories.Utility:CreateModule({
+        Name = 'SetPlayerLevel',
+		Tooltip = "Sets your player level to 1000 (client sided)",
+        Function = function(callback)
+			if callback then
+				old = lplr:GetAttribute("PlayerLevel")
+				lplr:SetAttribute("PlayerLevel", level.Value)
+			else
+				lplr:SetAttribute("PlayerLevel", old)
+				old = nil
+			end
+		end
+	})
+
+	level = PlayerLevel:CreateSlider({
+		Name = 'Player Level',
+		Min = 1,
+		Max = 1000,
+		Default = 100,
+		Function = function(val)
+			if PlayerLevel.Enabled then
+				lplr:SetAttribute("PlayerLevel", val)
+			end
+		end
+	})
+end)
+
 
         
                                     
