@@ -12932,7 +12932,7 @@ run(function()
         end)
     end
     
-    DrillUtilities = vape.Categories.Utility:CreateModule({
+    DrillUtilities = vape.Categories.kit:CreateModule({
         Name = 'AutoDrill',
         Function = function(callback)
             if callback then
