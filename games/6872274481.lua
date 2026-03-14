@@ -19610,6 +19610,304 @@ run(function()
 		Default = true,
 	})
 end)
+run(function()
+    local AutoDrone
+    local PriorityDropdown
+    local DropLocation
+    local FlightHeight
+    local FlightSpeed
+    local CollectAmount
+
+    local droneActive = false
+    local currentState = "idle"
+    local targetPosition = nil
+    local stateData = {}
+    
+    local CollectionService = game:GetService("CollectionService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local lplr = Players.LocalPlayer
+
+    local priorityOrders = {
+        ['Emerald > Diamond > Gold'] = {'emerald', 'diamond', 'iron'},
+        ['Diamond > Emerald > Gold'] = {'diamond', 'emerald', 'iron'},
+        ['Gold > Diamond > Emerald'] = {'iron', 'diamond', 'emerald'}
+    }
+
+    local lastDropTime = 0
+    local lastDropPos = nil
+    local flightLoop = nil
+
+    local function getMyDrone()
+        for _, drone in CollectionService:GetTagged('Drone') do
+            if drone:GetAttribute('PlayerUserId') == lplr.UserId then
+                return drone
+            end
+        end
+        return nil
+    end
+
+    local function getDroneItemCount(drone)
+        if not drone then return 0 end
+        return drone:GetAttribute('HeldItemAmount') or 0
+    end
+
+    local function getOwnBed()
+        local team = lplr:GetAttribute('Team')
+        if not team then return nil end
+        for _, bed in ipairs(CollectionService:GetTagged('bed')) do
+            if bed:GetAttribute('Team'..team..'NoBreak') then
+                return bed
+            end
+        end
+        return nil
+    end
+
+    local function getDropPosition()
+        if DropLocation.Value == 'Bed' then
+            local bed = getOwnBed()
+            if bed then return bed:GetPivot().Position end
+        end
+        if lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") then
+            return lplr.Character.HumanoidRootPart.Position
+        end
+        return nil
+    end
+
+    local function isRecentlyDropped(pos)
+        if not lastDropPos then return false end
+        if tick() - lastDropTime > 5 then return false end
+        return (pos - lastDropPos).Magnitude < 25
+    end
+
+    local function findNearestLoot(resourceType, dronePos)
+        local best = nil
+        local bestDist = math.huge
+
+        for _, obj in workspace:GetDescendants() do
+            if obj.Name == 'GeneratorAdornee' then
+                local genId = obj:GetAttribute('Id')
+                if genId and genId:lower():find(resourceType:lower()) then
+                    local genPos = obj:GetPivot().Position
+                    
+                    for _, drop in CollectionService:GetTagged('ItemDrop') do
+                        if drop:FindFirstChild('Handle') then
+                            if drop.Name:lower():find(resourceType:lower()) then
+                                local lootPos = drop.Handle.Position
+                                
+                                if (lootPos - genPos).Magnitude <= 12 then
+                                    if not isRecentlyDropped(lootPos) then
+                                        local dist = (lootPos - dronePos).Magnitude
+                                        if dist < bestDist and dist < 150 then
+                                            best = lootPos
+                                            bestDist = dist
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        return best
+    end
+
+    local function smoothMove(drone, target, speedMult)
+        if not drone or not drone.PrimaryPart then return false end
+        if not target then return false end
+
+        local current = drone.PrimaryPart.Position
+        local distance = (target - current).Magnitude
+
+        if distance < 2 then
+            return true
+        end
+
+        local direction = (target - current).Unit
+        local speed = math.clamp(distance * (speedMult or 1.5), 18, FlightSpeed.Value)
+
+        local targetLook = CFrame.lookAt(current, target)
+        drone.PrimaryPart.CFrame = drone.PrimaryPart.CFrame:Lerp(targetLook, 0.05)
+        
+        drone.PrimaryPart.AssemblyLinearVelocity = direction * speed
+        drone.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
+
+        return false
+    end
+
+    local function executeState()
+        local drone = getMyDrone()
+        if not drone or not drone.PrimaryPart then return end
+
+        if currentState == "collecting" then
+            if not targetPosition then
+                currentState = "searching"
+                return
+            end
+
+            if smoothMove(drone, targetPosition, 1.8) then
+                task.wait(0.4)
+                currentState = "searching"
+                targetPosition = nil
+            end
+
+        elseif currentState == "delivering" then
+            local dropPos = getDropPosition()
+            if not dropPos then
+                currentState = "searching"
+                return
+            end
+
+            local deliveryTarget = dropPos + Vector3.new(0, FlightHeight.Value, 0)
+
+            if smoothMove(drone, deliveryTarget, 1.5) then
+                task.wait(0.3)
+
+                local finalDropPos = dropPos + Vector3.new(
+                    math.random(-3, 3),
+                    1,
+                    math.random(-3, 3)
+                )
+
+                pcall(function()
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("rbxts_include")
+                        :WaitForChild("node_modules")
+                        :WaitForChild("@rbxts")
+                        :WaitForChild("net")
+                        :WaitForChild("out")
+                        :WaitForChild("_NetManaged")
+                        :WaitForChild("DropDroneItem")
+                        :FireServer({
+                            position = finalDropPos,
+                            direction = Vector3.new(0, -1, 0)
+                        })
+                end)
+
+                lastDropPos = dropPos
+                lastDropTime = tick()
+
+                local escapeDir = (drone.PrimaryPart.Position - dropPos).Unit
+                drone.PrimaryPart.AssemblyLinearVelocity = escapeDir * 35 + Vector3.new(0, 12, 0)
+
+                task.wait(1)
+                currentState = "searching"
+                targetPosition = nil
+            end
+
+        elseif currentState == "searching" then
+            if tick() - lastDropTime < 1.5 then
+                task.wait(0.5)
+                return
+            end
+
+            if getDroneItemCount(drone) >= CollectAmount.Value then
+                currentState = "delivering"
+                return
+            end
+
+            local priorityOrder = priorityOrders[PriorityDropdown.Value]
+            local foundLoot = false
+
+            for _, resourceType in ipairs(priorityOrder) do
+                if getDroneItemCount(drone) >= CollectAmount.Value then
+                    currentState = "delivering"
+                    return
+                end
+
+                local lootPos = findNearestLoot(resourceType, drone.PrimaryPart.Position)
+                if lootPos then
+                    targetPosition = lootPos + Vector3.new(0, 2, 0)
+                    currentState = "collecting"
+                    foundLoot = true
+                    break
+                end
+            end
+
+            if not foundLoot then
+                currentState = "idle"
+            end
+
+        elseif currentState == "idle" then
+            drone.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 1.5, 0)
+            drone.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
+            task.wait(1)
+            currentState = "searching"
+        end
+    end
+
+    AutoDrone = vape.Categories.Kit:CreateModule({
+        Name = 'Auto Drone',
+        Function = function(callback)
+            if callback then
+                droneActive = true
+                currentState = "searching"
+                targetPosition = nil
+                lastDropTime = 0
+                lastDropPos = nil
+                stateData = {}
+
+                flightLoop = RunService.Heartbeat:Connect(function()
+                    if not AutoDrone.Enabled then return end
+                    pcall(executeState)
+                end)
+            else
+                droneActive = false
+                currentState = "idle"
+                targetPosition = nil
+                
+                if flightLoop then
+                    flightLoop:Disconnect()
+                    flightLoop = nil
+                end
+
+                local drone = getMyDrone()
+                if drone and drone.PrimaryPart then
+                    drone.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
+                    drone.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
+        end,
+        Tooltip = 'Automatically collects loot and brings it to you'
+    })
+
+    PriorityDropdown = AutoDrone:CreateDropdown({
+        Name = 'Priority',
+        List = {'Emerald > Diamond > Gold', 'Diamond > Emerald > Gold', 'Gold > Diamond > Emerald'},
+        Default = 'Emerald > Diamond > Gold'
+    })
+
+    DropLocation = AutoDrone:CreateDropdown({
+        Name = 'Deliver To',
+        List = {'Player', 'Bed'},
+        Default = 'Player'
+    })
+
+    FlightHeight = AutoDrone:CreateSlider({
+        Name = 'Flight Height',
+        Default = 7,
+        Min = 4,
+        Max = 12
+    })
+
+    FlightSpeed = AutoDrone:CreateSlider({
+        Name = 'Flight Speed',
+        Default = 28,
+        Min = 18,
+        Max = 45
+    })
+
+    CollectAmount = AutoDrone:CreateSlider({
+        Name = 'Collect Amount',
+        Default = 3,
+        Min = 1,
+        Max = 10,
+        Tooltip = 'How many items to collect before dropping'
+    })
+end)
+
 
 				
 
