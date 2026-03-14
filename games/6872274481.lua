@@ -13650,7 +13650,7 @@ run(function()
         end
     end
 
-    AutoDrone = vape.Categories.Utility:CreateModule({
+    AutoDrone = vape.Categories.Kit:CreateModule({
         Name = 'Auto Drone',
         Function = function(callback)
             if callback then
